@@ -1,0 +1,10 @@
+{
+    "reference": "Radović et al., Phys. Rev. B 44, 759 (1991)",
+    "system": "Nb/Ni superlattice",
+    "Tc0_K": 9.2,
+    "d_S_nm": 20.0,
+    "xi_S_nm": 38.0,
+    "xi_F_nm": 2.3,
+    "E_ex_meV": 75.0,
+    "note": "Requires Usadel solver for full validation"
+}

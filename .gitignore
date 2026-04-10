@@ -1,0 +1,34 @@
+# Build artifacts
+build/
+_build/
+dist/
+_skbuild/
+*.egg-info/
+
+# Compiled objects
+*.o
+*.obj
+*.a
+*.lib
+*.dll
+*.so
+*.dylib
+*.pyd
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+*.whl
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
