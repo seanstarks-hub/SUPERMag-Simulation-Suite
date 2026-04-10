@@ -1,0 +1,18 @@
+{
+    "reference": "Ryazanov et al. (2003) / Fominov et al., PRB 66, 014507 (2002)",
+    "system": "Nb/Cu0.43Ni0.57 bilayer",
+    "model": "fominov",
+    "phase": "zero",
+    "Tc0_K": 7.1,
+    "d_S_nm": 25.0,
+    "xi_S_nm": 10.0,
+    "xi_F_nm": 4.2,
+    "E_ex_meV": 11.2,
+    "gamma": 0.15,
+    "gamma_B": 0.3,
+    "D_F_m2s": 4.0e-4,
+    "d_F_range_nm": [0.0, 25.0],
+    "n_dF_points": 50,
+    "tolerance": 0.05,
+    "notes": "h~130K converted to E_ex~11.2meV via E_ex=kB*h. xi_F=sqrt(hbar*D_F/(2*E_ex)). Parameters approximate from Fominov fit to Fig. 9."
+}

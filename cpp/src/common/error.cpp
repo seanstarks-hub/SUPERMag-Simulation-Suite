@@ -8,8 +8,10 @@ const char* supermag_error_string(int code) {
         case SUPERMAG_ERR_NULL_PTR:    return "Null pointer argument";
         case SUPERMAG_ERR_INVALID_DIM: return "Invalid dimension";
         case SUPERMAG_ERR_NO_CONVERGE: return "Did not converge (or not implemented)";
-        case SUPERMAG_ERR_ALLOC:       return "Allocation failure";
-        default:                       return "Unknown error";
+        case SUPERMAG_ERR_ALLOC:            return "Allocation failure";
+        case SUPERMAG_ERR_INVALID_MODEL:    return "Invalid model selection";
+        case SUPERMAG_ERR_NOT_IMPLEMENTED:  return "Not implemented";
+        default:                            return "Unknown error";
     }
 }
 

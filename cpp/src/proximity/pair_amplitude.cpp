@@ -4,8 +4,8 @@
 extern "C" {
 
 int supermag_proximity_pair_amplitude(
-    double F0, double xi_F, double d_F,
-    int n_points, double* x_out, double* F_out)
+    double d_F, double xi_F, supermag_phase_t phase,
+    int n_points, double *x_out, double *F_out)
 {
     if (!x_out || !F_out)
         return SUPERMAG_ERR_NULL_PTR;
@@ -16,9 +16,12 @@ int supermag_proximity_pair_amplitude(
     for (int i = 0; i < n_points; ++i) {
         double x = i * dx;
         x_out[i] = x;
-        // FFLO-like decaying oscillation in the ferromagnet
-        // F(x) = F0 * exp(-x/xi_F) * cos(x/xi_F)
-        F_out[i] = F0 * std::exp(-x / xi_F) * std::cos(x / xi_F);
+        double envelope = std::exp(-x / xi_F);
+        if (phase == SUPERMAG_PHASE_ZERO) {
+            F_out[i] = envelope * std::cos(x / xi_F);
+        } else {
+            F_out[i] = envelope * std::sin(x / xi_F);
+        }
     }
     return SUPERMAG_OK;
 }

@@ -13,9 +13,11 @@ Modules:
     triplet        — Spin-triplet correlations solver (stub)
     materials      — Material parameter database
     plotting       — Visualization utilities
+    themes         — Matplotlib figure styling presets
 """
 
 __version__ = "0.1.0"
 
 from supermag.proximity import pair_amplitude, critical_temperature
 from supermag.materials import get_material, list_materials
+from supermag.themes import apply_theme, get_theme, list_themes, theme_context

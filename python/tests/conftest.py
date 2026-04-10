@@ -19,6 +19,7 @@ def nb_fe_params():
         "xi_S": 38.0,     # nm
         "xi_F": 0.7,      # nm
         "E_ex": 256.0,    # meV
+        "gamma": 0.3,     # dimensionless
     }
 
 

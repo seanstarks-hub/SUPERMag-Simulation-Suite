@@ -11,9 +11,14 @@ Physics:
     with a characteristic wavelength ~xi_F (FFLO-like oscillation).
     This leads to non-monotonic Tc(d_F) behavior.
 
+Models:
+    thin_s   — Thin-S limit with digamma self-consistency equation
+    fominov  — PRB 66, 014507 (2002): includes gamma_B interface barrier
+
 References:
     Buzdin, A.I. (1982). JETP Lett. 35, 178.
     Radović, Z. et al. (1991). Phys. Rev. B 44, 759.
+    Fominov, Ya.V. et al. (2002). Phys. Rev. B 66, 014507.
 """
 
 import numpy as np
@@ -24,28 +29,31 @@ _USE_NATIVE = False
 try:
     from supermag._native import (
         _pair_amplitude as _native_pair_amplitude,
-        _critical_temp as _native_critical_temp,
+        _solve_tc_batch as _native_solve_tc_batch,
     )
     _USE_NATIVE = True
 except ImportError:
     pass
 
 
-def pair_amplitude(d_F, xi_F, F0=1.0, n_points=500):
+def pair_amplitude(d_F, xi_F, phase="zero", n_points=500):
     """
     Compute the pair amplitude F(x) in the ferromagnet layer of an S/F bilayer.
 
-    The pair amplitude exhibits FFLO-like decaying oscillation:
-        F(x) = F0 * exp(-x/xi_F) * cos(x/xi_F)
+    For phase="zero" (0-junction):
+        F(x) = exp(-x/xi_F) * cos(x/xi_F)
+    For phase="pi" (pi-junction):
+        F(x) = exp(-x/xi_F) * sin(x/xi_F)
 
     Parameters
     ----------
     d_F : float
         Ferromagnet layer thickness (nm).
     xi_F : float
-        Ferromagnet coherence length (nm). Typically 0.5–5 nm.
-    F0 : float, optional
-        Pair amplitude at the S/F interface (dimensionless). Default: 1.0.
+        Ferromagnet coherence length (nm). Typically 0.5–10 nm.
+    phase : str, optional
+        "zero" for 0-junction (coth kernel) or "pi" for pi-junction (tanh kernel).
+        Default: "zero".
     n_points : int, optional
         Number of spatial grid points. Default: 500.
 
@@ -64,21 +72,25 @@ def pair_amplitude(d_F, xi_F, F0=1.0, n_points=500):
     F at interface: 1.000
     """
     if _USE_NATIVE:
-        return _native_pair_amplitude(F0, xi_F, d_F, n_points)
+        phase_int = 1 if phase == "pi" else 0
+        return _native_pair_amplitude(d_F, xi_F, phase_int, n_points)
 
     # Pure Python fallback
     x = np.linspace(0, d_F, n_points)
-    F = F0 * np.exp(-x / xi_F) * np.cos(x / xi_F)
+    envelope = np.exp(-x / xi_F)
+    if phase == "pi":
+        F = envelope * np.sin(x / xi_F)
+    else:
+        F = envelope * np.cos(x / xi_F)
     return x, F
 
 
-def critical_temperature(Tc0, d_S, d_F_array, E_ex, xi_S, xi_F):
+def critical_temperature(Tc0, d_S, d_F_array, E_ex, xi_S, xi_F,
+                         gamma=0.3, gamma_B=0.0, D_F=2.5e-4,
+                         model="thin_s", phase="zero",
+                         depairing=None):
     """
     Compute critical temperature Tc as a function of ferromagnet thickness d_F.
-
-    Uses single-mode Buzdin approximation. Tc(d_F) shows oscillatory
-    non-monotonic behavior due to FFLO-like pair amplitude oscillation
-    in the ferromagnet layer.
 
     Parameters
     ----------
@@ -94,6 +106,19 @@ def critical_temperature(Tc0, d_S, d_F_array, E_ex, xi_S, xi_F):
         Superconductor coherence length (nm). E.g., 38 nm for Nb.
     xi_F : float
         Ferromagnet coherence length (nm). E.g., 0.7 nm for Fe.
+    gamma : float, optional
+        Interface transparency parameter (dimensionless). Default: 0.3.
+    gamma_B : float, optional
+        Interface barrier parameter (Fominov model). Default: 0.0.
+    D_F : float, optional
+        Diffusion coefficient in ferromagnet (m^2/s). Default: 2.5e-4.
+    model : str, optional
+        Equation model: "thin_s" or "fominov". Default: "thin_s".
+    phase : str, optional
+        "zero" or "pi". Default: "zero".
+    depairing : dict, optional
+        Depairing channels: {"ag": float, "zeeman": float, "orbital": float,
+        "spin_orbit": float}. All default to 0.0.
 
     Returns
     -------
@@ -111,32 +136,74 @@ def critical_temperature(Tc0, d_S, d_F_array, E_ex, xi_S, xi_F):
     d_F_array = np.asarray(d_F_array, dtype=np.float64)
 
     if _USE_NATIVE:
-        return _native_critical_temp(Tc0, d_S, xi_S, xi_F, E_ex, d_F_array)
+        model_int = 1 if model == "fominov" else 0
+        phase_int = 1 if phase == "pi" else 0
+        dp = depairing or {}
+        return _native_solve_tc_batch(
+            Tc0, d_S, xi_S, xi_F, gamma, gamma_B, E_ex, D_F,
+            model_int, phase_int,
+            dp.get("ag", 0.0), dp.get("zeeman", 0.0),
+            dp.get("orbital", 0.0), dp.get("spin_orbit", 0.0),
+            d_F_array)
 
-    # Pure Python fallback: single-mode Buzdin approximation
+    # Pure Python fallback: digamma-based self-consistency
+    from scipy.special import digamma as _digamma
+
     inv_xi_F = 1.0 / xi_F
     Tc_out = np.empty_like(d_F_array)
 
+    lambda_dep = 0.0
+    if depairing:
+        lambda_dep = sum(depairing.get(k, 0.0)
+                         for k in ("ag", "zeeman", "orbital", "spin_orbit"))
+
     for i, d_F in enumerate(d_F_array):
-        if d_F < 0:
+        if d_F <= 0:
             Tc_out[i] = Tc0
             continue
 
-        arg = d_F * inv_xi_F
-        exp_decay = np.exp(-2.0 * arg)
-        real_exp = exp_decay * np.cos(2.0 * arg)
-        imag_exp = -exp_decay * np.sin(2.0 * arg)
+        # Compute kernel magnitude (simplified scalar form)
+        q = (1.0 + 1.0j) / xi_F
+        qd = q * d_F
+        if phase == "pi":
+            K = q * np.sinh(qd) / np.cosh(qd)
+        else:
+            K = q * np.cosh(qd) / np.sinh(qd)
 
-        real_num = 1.0 - real_exp
-        imag_num = -imag_exp
+        # Effective coupling
+        if model == "fominov" and gamma_B > 0:
+            alpha_K = gamma * K / (1.0 + gamma_B * K)
+        else:
+            alpha_K = gamma * K
 
-        kappa_real = xi_S / xi_F
-        kappa_imag = xi_S / xi_F
-        denom = kappa_real**2 + kappa_imag**2
-        ratio_real = (real_num * kappa_real + imag_num * kappa_imag) / denom
+        # Brent-like scan for highest root of
+        # F(T) = ln(Tc0/T) - Re[psi(0.5 + alpha*Tc0/(2*pi*T) + lambda_dep) - psi(0.5)]
+        best_tc = 0.0
+        psi_half = float(_digamma(0.5))
+        T_vals = np.linspace(0.01, Tc0, 1000)
+        for j in range(len(T_vals) - 1):
+            T_a, T_b = T_vals[j], T_vals[j + 1]
 
-        eta = (xi_S / d_S) * ratio_real
-        Tc = Tc0 * (1.0 - eta)
-        Tc_out[i] = np.clip(Tc, 0.0, Tc0)
+            def _f(T):
+                A = alpha_K * Tc0 / (2.0 * np.pi * T) + lambda_dep
+                psi_val = _digamma(complex(0.5 + A))
+                return np.log(Tc0 / T) - (psi_val - psi_half).real
+
+            fa, fb = _f(T_a), _f(T_b)
+            if fa * fb < 0:
+                # Bisection refinement
+                for _ in range(60):
+                    T_m = 0.5 * (T_a + T_b)
+                    fm = _f(T_m)
+                    if fm * fa < 0:
+                        T_b = T_m
+                    else:
+                        T_a = T_m
+                        fa = fm
+                root = 0.5 * (T_a + T_b)
+                if root > best_tc:
+                    best_tc = root
+
+        Tc_out[i] = np.clip(best_tc, 0.0, Tc0)
 
     return Tc_out

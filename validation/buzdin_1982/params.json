@@ -6,6 +6,7 @@
     "xi_S_nm": 38.0,
     "xi_F_nm": 0.7,
     "E_ex_meV": 256.0,
+    "gamma": 0.3,
     "d_F_range_nm": [0.5, 20.0],
     "n_dF_points": 50,
     "tolerance": 1e-3

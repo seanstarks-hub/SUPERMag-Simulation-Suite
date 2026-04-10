@@ -42,6 +42,7 @@ def run_buzdin_1982():
             d_F_array=d_F_expected,
             E_ex=params["E_ex_meV"],
             xi_S=params["xi_S_nm"], xi_F=params["xi_F_nm"],
+            gamma=params.get("gamma", 0.3),
         )
 
         # Normalize by Tc0 for comparison
@@ -58,12 +59,53 @@ def run_buzdin_1982():
 
         x_computed, F_computed = pair_amplitude(
             d_F=x_expected[-1], xi_F=params["xi_F_nm"],
-            F0=1.0, n_points=len(x_expected),
+            n_points=len(x_expected),
         )
 
         max_dev = np.max(np.abs(F_computed - F_expected))
         passed = max_dev < tolerance
         results.append(("Buzdin1982/pair_amplitude", passed, max_dev, tolerance))
+
+    return results
+
+
+def run_ryazanov_2003():
+    """Validate against Ryazanov (2003) / Fominov (2002) Nb/Cu0.43Ni0.57 data."""
+    base = os.path.join(os.path.dirname(__file__), "ryazanov_2003")
+    with open(os.path.join(base, "params.json")) as f:
+        params = json.load(f)
+
+    tolerance = params.get("tolerance", 0.05)
+    results = []
+
+    # --- Tc(d_F) validation using Fominov model ---
+    tc_file = os.path.join(base, "expected", "tc_vs_df.csv")
+    if os.path.exists(tc_file):
+        expected = np.genfromtxt(tc_file, delimiter=",", skip_header=1)
+        d_F_expected = expected[:, 0]
+        Tc_expected = expected[:, 1]
+
+        # Filter out d_F = 0 since solver needs d_F > 0
+        mask = d_F_expected > 0
+        d_F_nz = d_F_expected[mask]
+        Tc_exp_nz = Tc_expected[mask]
+
+        Tc_computed = critical_temperature(
+            Tc0=params["Tc0_K"], d_S=params["d_S_nm"],
+            d_F_array=d_F_nz,
+            E_ex=params["E_ex_meV"],
+            xi_S=params["xi_S_nm"], xi_F=params["xi_F_nm"],
+            gamma=params.get("gamma", 0.15),
+            gamma_B=params.get("gamma_B", 0.3),
+            D_F=params.get("D_F_m2s", 4.0e-4),
+            model=params.get("model", "fominov"),
+            phase=params.get("phase", "zero"),
+        )
+
+        # Normalize by Tc0 for comparison
+        max_dev = np.max(np.abs(Tc_computed - Tc_exp_nz)) / params["Tc0_K"]
+        passed = max_dev < tolerance
+        results.append(("Ryazanov2003/Tc_vs_dF", passed, max_dev, tolerance))
 
     return results
 
@@ -80,6 +122,11 @@ def main():
         all_results.extend(run_buzdin_1982())
     except Exception as e:
         all_results.append(("Buzdin1982", False, str(e), "N/A"))
+
+    try:
+        all_results.extend(run_ryazanov_2003())
+    except Exception as e:
+        all_results.append(("Ryazanov2003", False, str(e), "N/A"))
 
     # Report
     print()

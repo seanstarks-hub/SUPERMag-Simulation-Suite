@@ -67,6 +67,12 @@ MATERIALS = {
         "xi_F": 10.0,        # nm
         "D_F": 4.0e-4,       # m^2/s
     },
+    "Cu0.43Ni0.57": {
+        "type": "ferromagnet",
+        "E_ex": 11.2,        # meV — h~130K from Fominov fit (kB*130K ≈ 11.2 meV)
+        "xi_F": 4.2,         # nm — sqrt(hbar*D_F/(2*E_ex))
+        "D_F": 4.0e-4,       # m^2/s
+    },
 }
 
 

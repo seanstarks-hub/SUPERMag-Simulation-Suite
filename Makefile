@@ -17,8 +17,11 @@ include config/detect_platform.mk
 LIB_SRCS = \
 	cpp/src/common/error.cpp \
 	cpp/src/common/constants.cpp \
+	cpp/src/common/digamma.cpp \
 	cpp/src/proximity/pair_amplitude.cpp \
 	cpp/src/proximity/critical_temp.cpp \
+	cpp/src/proximity/kernels.cpp \
+	cpp/src/proximity/depairing.cpp \
 	cpp/src/linalg/tridiag.cpp \
 	cpp/src/linalg/simd_kernels.cpp \
 	cpp/src/solvers/usadel.cpp \
@@ -26,12 +29,15 @@ LIB_SRCS = \
 	cpp/src/solvers/bdg.cpp \
 	cpp/src/solvers/ginzburg_landau.cpp \
 	cpp/src/solvers/josephson.cpp \
-	cpp/src/solvers/triplet.cpp
+	cpp/src/solvers/triplet.cpp \
+	cpp/src/solvers/root_scalar.cpp \
+	cpp/src/solvers/determinant.cpp
 
 LIB_OBJS = $(patsubst cpp/%.cpp,build/obj/%$(OBJ_EXT),$(LIB_SRCS))
 STATIC_LIB = build/$(LIB_PREFIX)supermag$(LIB_EXT)
 
-TEST_SRCS = cpp/test/test_proximity.cpp cpp/test/test_tridiag.cpp cpp/test/test_stubs.cpp
+TEST_SRCS = cpp/test/test_proximity.cpp cpp/test/test_tridiag.cpp cpp/test/test_stubs.cpp \
+	cpp/test/test_digamma.cpp cpp/test/test_root_scalar.cpp cpp/test/test_determinant.cpp
 TEST_BINS = $(patsubst cpp/test/%.cpp,build/test/%$(EXE_EXT),$(TEST_SRCS))
 
 # ── Build ────────────────────────────────────────────────────
