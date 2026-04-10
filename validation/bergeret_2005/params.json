@@ -1,0 +1,5 @@
+{
+    "reference": "Bergeret et al., Rev. Mod. Phys. 77, 1321 (2005)",
+    "system": "S/F1/N/F2/S with misaligned magnetizations",
+    "note": "Requires triplet solver for full validation"
+}
