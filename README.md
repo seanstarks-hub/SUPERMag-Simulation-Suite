@@ -33,6 +33,7 @@ Tc = supermag.critical_temperature(
     Tc0=nb["Tc"], d_S=50.0,
     d_F_array=d_F, E_ex=fe["E_ex"],
     xi_S=nb["xi_S"], xi_F=fe["xi_F"],
+    gamma=0.15,
 )
 
 # Plot

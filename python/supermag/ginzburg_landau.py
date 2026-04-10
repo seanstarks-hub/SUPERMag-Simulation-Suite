@@ -4,7 +4,7 @@ STUB — Ginzburg-Landau free energy solver Python interface.
 Minimizes the GL functional for vortex states, mixed-state configurations,
 and domain structures near Tc.
 
-See docs/theory/ginzburg_landau.md for details.
+See docs/theory/ginzburg_landau.ipynb for details.
 """
 
 import numpy as np
@@ -38,5 +38,5 @@ def minimize(alpha, beta, kappa, nx, ny, dx):
         This solver is not yet implemented.
     """
     raise NotImplementedError(
-        "GL solver not yet implemented. See docs/theory/ginzburg_landau.md"
+        "GL solver not yet implemented. See docs/theory/ginzburg_landau.ipynb"
     )

@@ -5,7 +5,7 @@ Constructs and diagonalizes the BdG Hamiltonian for microscopic treatment
 of S/F heterostructures. Needed when quasiclassical approximations break
 down (ultra-thin layers, strong spin-orbit coupling, interface roughness).
 
-See docs/theory/bdg_discretization.md for details.
+See docs/theory/bdg_discretization.ipynb for details.
 """
 
 import numpy as np
@@ -37,5 +37,5 @@ def solve(n_sites, t_hop, Delta, E_ex):
         This solver is not yet implemented.
     """
     raise NotImplementedError(
-        "BdG solver not yet implemented. See docs/theory/bdg_discretization.md"
+        "BdG solver not yet implemented. See docs/theory/bdg_discretization.ipynb"
     )

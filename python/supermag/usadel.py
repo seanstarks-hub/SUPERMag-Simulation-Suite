@@ -4,7 +4,7 @@ STUB — Usadel diffusive-limit solver Python interface.
 Solves the Usadel equation for quasiclassical Green's functions in the
 diffusive limit with Kupriyanov-Lukichev boundary conditions at S/F interfaces.
 
-See docs/theory/usadel_equations.md for full mathematical treatment.
+See docs/theory/usadel_equations.ipynb for full mathematical treatment.
 """
 
 import numpy as np
@@ -47,5 +47,5 @@ def solve(Tc0, d_S, d_F, xi_S, xi_F, E_ex, n_grid=200):
         This solver is not yet implemented.
     """
     raise NotImplementedError(
-        "Usadel solver not yet implemented. See docs/theory/usadel_equations.md"
+        "Usadel solver not yet implemented. See docs/theory/usadel_equations.ipynb"
     )

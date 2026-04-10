@@ -4,7 +4,7 @@ STUB — Josephson junction CPR solver Python interface.
 Computes current-phase relations for S/F/S, S/F/I/F/S junctions.
 Detects 0-pi transitions as function of F-layer thickness and temperature.
 
-See docs/theory/josephson_cpr.md for details.
+See docs/theory/josephson_cpr.ipynb for details.
 """
 
 import numpy as np
@@ -40,5 +40,5 @@ def current_phase_relation(d_F, xi_F, E_ex, T, n_phases=100):
         This solver is not yet implemented.
     """
     raise NotImplementedError(
-        "Josephson CPR solver not yet implemented. See docs/theory/josephson_cpr.md"
+        "Josephson CPR solver not yet implemented. See docs/theory/josephson_cpr.ipynb"
     )

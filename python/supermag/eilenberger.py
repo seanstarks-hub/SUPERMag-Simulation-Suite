@@ -4,7 +4,7 @@ STUB — Eilenberger clean-limit solver Python interface.
 Solves the Eilenberger equation using Riccati parameterization
 for quasiclassical Green's functions in the clean limit.
 
-See docs/theory/usadel_equations.md for the diffusive counterpart.
+See docs/theory/usadel_equations.ipynb for the diffusive counterpart.
 """
 
 import numpy as np
@@ -42,5 +42,5 @@ def solve(Tc0, d_S, d_F, xi_S, E_ex, n_grid=200):
         This solver is not yet implemented.
     """
     raise NotImplementedError(
-        "Eilenberger solver not yet implemented. See docs/theory/usadel_equations.md"
+        "Eilenberger solver not yet implemented. See docs/theory/usadel_equations.ipynb"
     )
