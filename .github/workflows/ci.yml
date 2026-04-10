@@ -28,7 +28,11 @@ jobs:
 
       - name: Build C++ library
         run: |
-          mkdir build\obj\src\common build\obj\src\proximity build\obj\src\linalg build\obj\src\solvers build\test
+          mkdir build\obj\src\common
+          mkdir build\obj\src\proximity
+          mkdir build\obj\src\linalg
+          mkdir build\obj\src\solvers
+          mkdir build\test
           cl /std:c++17 /O2 /arch:AVX2 /EHsc /W4 /I cpp/include /c /Fobuild\obj\src\common\error.obj cpp\src\common\error.cpp
           cl /std:c++17 /O2 /arch:AVX2 /EHsc /W4 /I cpp/include /c /Fobuild\obj\src\common\constants.obj cpp\src\common\constants.cpp
           cl /std:c++17 /O2 /arch:AVX2 /EHsc /W4 /I cpp/include /c /Fobuild\obj\src\proximity\pair_amplitude.obj cpp\src\proximity\pair_amplitude.cpp
