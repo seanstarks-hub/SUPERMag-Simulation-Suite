@@ -1,0 +1,33 @@
+name: Build Wheels
+
+on:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  build-wheel:
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install cibuildwheel
+        run: pip install cibuildwheel
+
+      - name: Build wheel
+        run: python -m cibuildwheel --output-dir wheelhouse python/
+        env:
+          CIBW_BUILD: "cp311-win_amd64"
+          CIBW_ARCHS_WINDOWS: "AMD64"
+
+      - name: Upload wheel
+        uses: actions/upload-artifact@v4
+        with:
+          name: wheel-windows-x86_64
+          path: wheelhouse/*.whl

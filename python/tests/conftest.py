@@ -1,5 +1,11 @@
 """Shared pytest fixtures for SUPERMag test suite."""
 
+import os
+import sys
+
+# Add python/ directory to path so 'supermag' package is importable
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
+
 import pytest
 import numpy as np
 

@@ -41,7 +41,7 @@ void supermag_simd_axpy(double scale, const double* x, double* out, int n) {
     for (; i + 3 < n; i += 4) {
         __m256d vx = _mm256_loadu_pd(x + i);
         __m256d vo = _mm256_loadu_pd(out + i);
-        vo = _mm256_fmadd_pd(vs, vx, vo);
+        vo = _mm256_add_pd(vo, _mm256_mul_pd(vs, vx));
         _mm256_storeu_pd(out + i, vo);
     }
 #endif
