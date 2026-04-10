@@ -163,18 +163,20 @@ def critical_temperature(Tc0, d_S, d_F_array, E_ex, xi_S, xi_F,
             continue
 
         # Compute kernel magnitude (simplified scalar form)
+        # S/F bilayer with vacuum boundary: K = q*tanh(q*d_F) for 0-junction
         q = (1.0 + 1.0j) / xi_F
         qd = q * d_F
         if phase == "pi":
-            K = q * np.sinh(qd) / np.cosh(qd)
-        else:
             K = q * np.cosh(qd) / np.sinh(qd)
-
-        # Effective coupling
-        if model == "fominov" and gamma_B > 0:
-            alpha_K = gamma * K / (1.0 + gamma_B * K)
         else:
-            alpha_K = gamma * K
+            K = q * np.sinh(qd) / np.cosh(qd)
+
+        # Effective coupling — scale by xi_S / d_S (thin-S pair-breaking weight)
+        eta = xi_S / d_S
+        if model == "fominov" and gamma_B > 0:
+            alpha_K = gamma * eta * K / (1.0 + gamma_B * K)
+        else:
+            alpha_K = gamma * eta * K
 
         # Brent-like scan for highest root of
         # F(T) = ln(Tc0/T) - Re[psi(0.5 + alpha*Tc0/(2*pi*T) + lambda_dep) - psi(0.5)]
