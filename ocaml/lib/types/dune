@@ -1,0 +1,3 @@
+(library
+ (name supermag_types)
+ (public_name supermag.types))

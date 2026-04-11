@@ -6,6 +6,7 @@
 #include <cmath>
 #include <complex>
 #include <algorithm>
+#include <vector>
 
 extern "C" {
 
@@ -16,20 +17,21 @@ int supermag_eilenberger_solve(
 {
     if (!f_out || !x_out)
         return SUPERMAG_ERR_NULL_PTR;
-    if (n_grid <= 4 || xi_S <= 0)
+    if (n_grid <= 4 || n_grid > 100000 || xi_S <= 0)
         return SUPERMAG_ERR_INVALID_DIM;
 
     const double pi = 3.14159265358979323846;
     const double kB_meV = 8.617333262e-2;
     const double Delta_0 = 1.764 * kB_meV * Tc0;
-    double T = 0.5 * Tc0;
-    double Delta_T = Delta_0 * std::sqrt(1.0 - T / Tc0);
+    // Use T = 0.5 * Tc0  [KNOWN-LIMIT-1]
+    double T_use = 0.5 * Tc0;
+    double Delta_T = Delta_0 * std::sqrt(1.0 - T_use / Tc0);
 
     // hbar*v_F = 2*pi*kB*Tc * xi_S
     double hbar_vF = 2.0 * pi * kB_meV * Tc0 * xi_S;
 
     // Lowest Matsubara frequency
-    double omega_1 = pi * kB_meV * T;
+    double omega_1 = pi * kB_meV * T_use;
 
     // BCS Riccati parameter
     double a_BCS = Delta_T / (omega_1 + std::sqrt(omega_1 * omega_1 + Delta_T * Delta_T));
@@ -71,8 +73,7 @@ int supermag_eilenberger_solve(
         double vx = hbar_vF * cos_theta;
 
         // Riccati integration
-        std::complex<double> a[2048];
-        if (n_grid > 2048) return SUPERMAG_ERR_INVALID_DIM;
+        std::vector<std::complex<double>> a(n_grid);
 
         if (cos_theta > 0) {
             // Right-mover: left → right

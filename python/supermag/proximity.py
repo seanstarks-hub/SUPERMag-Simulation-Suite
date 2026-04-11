@@ -71,6 +71,15 @@ def pair_amplitude(d_F, xi_F, phase="zero", n_points=500):
     >>> print(f"F at interface: {F[0]:.3f}")
     F at interface: 1.000
     """
+    if d_F <= 0:
+        raise ValueError(f"d_F must be positive, got {d_F}")
+    if xi_F <= 0:
+        raise ValueError(f"xi_F must be positive, got {xi_F}")
+    if phase not in ("zero", "pi"):
+        raise ValueError(f"phase must be 'zero' or 'pi', got {phase!r}")
+    if n_points < 2:
+        raise ValueError(f"n_points must be >= 2, got {n_points}")
+
     if _USE_NATIVE:
         phase_int = 1 if phase == "pi" else 0
         return _native_pair_amplitude(d_F, xi_F, phase_int, n_points)
@@ -133,6 +142,19 @@ def critical_temperature(Tc0, d_S, d_F_array, E_ex, xi_S, xi_F,
     >>> Tc = supermag.critical_temperature(Tc0=9.2, d_S=50.0,
     ...     d_F_array=d_F, E_ex=256.0, xi_S=38.0, xi_F=0.7)
     """
+    if Tc0 <= 0:
+        raise ValueError(f"Tc0 must be positive, got {Tc0}")
+    if d_S <= 0:
+        raise ValueError(f"d_S must be positive, got {d_S}")
+    if xi_S <= 0:
+        raise ValueError(f"xi_S must be positive, got {xi_S}")
+    if xi_F <= 0:
+        raise ValueError(f"xi_F must be positive, got {xi_F}")
+    if model not in ("thin_s", "fominov"):
+        raise ValueError(f"model must be 'thin_s' or 'fominov', got {model!r}")
+    if phase not in ("zero", "pi"):
+        raise ValueError(f"phase must be 'zero' or 'pi', got {phase!r}")
+
     d_F_array = np.asarray(d_F_array, dtype=np.float64)
 
     if _USE_NATIVE:
@@ -162,21 +184,22 @@ def critical_temperature(Tc0, d_S, d_F_array, E_ex, xi_S, xi_F,
             Tc_out[i] = Tc0
             continue
 
-        # Compute kernel magnitude (simplified scalar form)
-        # S/F bilayer with vacuum boundary: K = q*tanh(q*d_F) for 0-junction
+        # Compute kernel magnitude (simplified scalar form)  [EQ-2, EQ-3]
+        # 0-junction: K = q*coth(q*d_F) — cosh/sinh
+        # π-junction: K = q*tanh(q*d_F) — sinh/cosh
         q = (1.0 + 1.0j) / xi_F
         qd = q * d_F
-        if phase == "pi":
+        if phase == "zero":
             K = q * np.cosh(qd) / np.sinh(qd)
-        else:
+        elif phase == "pi":
             K = q * np.sinh(qd) / np.cosh(qd)
 
-        # Effective coupling — scale by xi_S / d_S (thin-S pair-breaking weight)
-        eta = xi_S / d_S
+        # Effective coupling  [EQ-4, EQ-5]
+        # No eta = xi_S/d_S prefactor — gamma absorbs coupling strength.
         if model == "fominov" and gamma_B > 0:
-            alpha_K = gamma * eta * K / (1.0 + gamma_B * K)
+            alpha_K = gamma * K / (1.0 + gamma_B * K)
         else:
-            alpha_K = gamma * eta * K
+            alpha_K = gamma * K
 
         # Brent-like scan for highest root of
         # F(T) = ln(Tc0/T) - Re[psi(0.5 + alpha*Tc0/(2*pi*T) + lambda_dep) - psi(0.5)]

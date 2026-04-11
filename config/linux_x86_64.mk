@@ -1,7 +1,7 @@
 # GCC/Clang flags for Linux x86_64
 CXX      = g++
 CXXFLAGS = -std=c++17 -O2 -mavx2 -Wall -Wextra -fPIC
-CPPFLAGS = -I cpp/include
+CPPFLAGS = -I cpp/include -I cpp/src
 AR       = ar
 ARFLAGS  = rcs
 OBJ_EXT  = .o

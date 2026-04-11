@@ -51,7 +51,7 @@ def _tridiag_solve(a, b, c, d):
     return x
 
 
-def solve(Tc0, d_S, d_F, xi_S, xi_F, E_ex, n_grid=200):
+def solve(Tc0, d_S, d_F, xi_S, xi_F, E_ex, n_grid=200, T=None):
     """
     Solve the Usadel equation for an S/F bilayer.
 
@@ -75,6 +75,8 @@ def solve(Tc0, d_S, d_F, xi_S, xi_F, E_ex, n_grid=200):
         Exchange energy in ferromagnet (meV).
     n_grid : int, optional
         Number of spatial grid points. Default: 200.
+    T : float, optional
+        Temperature (K). If None, defaults to 0.5 * Tc0.
 
     Returns
     -------
@@ -83,7 +85,7 @@ def solve(Tc0, d_S, d_F, xi_S, xi_F, E_ex, n_grid=200):
     Delta : numpy.ndarray
         Order parameter profile (meV), real.
     """
-    if _USE_NATIVE:
+    if _USE_NATIVE and T is None:
         return _native_usadel_solve(Tc0, d_S, d_F, xi_S, xi_F, E_ex, n_grid)
 
     # Pure Python fallback — linearized Usadel with Matsubara sum
@@ -106,9 +108,9 @@ def solve(Tc0, d_S, d_F, xi_S, xi_F, E_ex, n_grid=200):
     h_S = d_S / max(n_S - 1, 1)
     h_F = d_F / max(n_F - 1, 1)
 
-    # Temperature: work at T = 0.5 * Tc0 (representative)
-    T = 0.5 * Tc0
-    Delta_T = Delta_0 * np.sqrt(1.0 - T / Tc0)
+    # Temperature: use specified T or default to 0.5 * Tc0
+    T_use = T if T is not None else 0.5 * Tc0
+    Delta_T = Delta_0 * np.sqrt(1.0 - T_use / Tc0)
 
     # Number of Matsubara frequencies
     n_matsubara = 100
@@ -124,7 +126,7 @@ def solve(Tc0, d_S, d_F, xi_S, xi_F, E_ex, n_grid=200):
         theta_sum = np.zeros(n_grid, dtype=complex)
 
         for n_m in range(n_matsubara):
-            omega_n = np.pi * kB_meV * T * (2 * n_m + 1)  # meV
+            omega_n = np.pi * kB_meV * T_use * (2 * n_m + 1)  # meV
 
             # Solve linearized Usadel on S and F grids separately
             # then match at the interface
@@ -177,7 +179,7 @@ def solve(Tc0, d_S, d_F, xi_S, xi_F, E_ex, n_grid=200):
         # Use BCS coupling constant via Tc relation
         # 1/λ = πT Σ 1/sqrt(ω_n² + Δ²) → λ ≈ 0.3 (typical for Nb)
         lambda_BCS = 0.3
-        Delta_new = lambda_BCS * np.pi * kB_meV * T * np.real(theta_sum)
+        Delta_new = lambda_BCS * np.pi * kB_meV * T_use * np.real(theta_sum)
 
         # Only update S region (Δ = 0 in F by definition for non-SC)
         Delta_new[n_S:] = 0.0

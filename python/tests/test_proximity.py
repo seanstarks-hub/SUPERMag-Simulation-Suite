@@ -39,6 +39,22 @@ class TestPairAmplitude:
         # Interior should be nonzero even though F(0)=0
         assert np.max(np.abs(F)) > 0.1
 
+    def test_invalid_d_F(self):
+        with pytest.raises(ValueError, match="d_F must be positive"):
+            pair_amplitude(d_F=-1.0, xi_F=2.0)
+
+    def test_invalid_xi_F(self):
+        with pytest.raises(ValueError, match="xi_F must be positive"):
+            pair_amplitude(d_F=10.0, xi_F=0.0)
+
+    def test_invalid_phase(self):
+        with pytest.raises(ValueError, match="phase must be"):
+            pair_amplitude(d_F=10.0, xi_F=2.0, phase="invalid")
+
+    def test_invalid_n_points(self):
+        with pytest.raises(ValueError, match="n_points must be"):
+            pair_amplitude(d_F=10.0, xi_F=2.0, n_points=0)
+
 
 class TestCriticalTemperature:
     def test_basic(self, nb_fe_params, d_F_array):
@@ -80,3 +96,18 @@ class TestCriticalTemperature:
             d_F_array=d_F, depairing={"ag": 0.1}, **nb_fe_params)
         # Depairing should suppress Tc further
         assert Tc_with_dp[0] <= Tc_no_dp[0] + 0.5
+
+    def test_invalid_Tc0(self, nb_fe_params):
+        params = {**nb_fe_params, "Tc0": -1.0}
+        with pytest.raises(ValueError, match="Tc0 must be positive"):
+            critical_temperature(d_F_array=np.array([5.0]), **params)
+
+    def test_invalid_model(self, nb_fe_params):
+        with pytest.raises(ValueError, match="model must be"):
+            critical_temperature(d_F_array=np.array([5.0]),
+                                 model="invalid", **nb_fe_params)
+
+    def test_invalid_phase_ct(self, nb_fe_params):
+        with pytest.raises(ValueError, match="phase must be"):
+            critical_temperature(d_F_array=np.array([5.0]),
+                                 phase="bad", **nb_fe_params)

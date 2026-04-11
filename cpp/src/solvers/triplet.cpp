@@ -17,6 +17,10 @@ int supermag_triplet_solve(
     if (n_layers < 2 || n_grid <= 0)
         return SUPERMAG_ERR_INVALID_DIM;
 
+    // Hardcoded coherence lengths  [KNOWN-LIMIT-4]
+    const double xi_F = 1.0;   // nm
+    const double xi_N = 10.0;  // nm
+
     // Total thickness
     double total = 0.0;
     for (int i = 0; i < n_layers; ++i)
@@ -25,10 +29,6 @@ int supermag_triplet_solve(
     // Build spatial grid
     for (int i = 0; i < n_grid; ++i)
         x_out[i] = total * i / std::max(n_grid - 1, 1);
-
-    // Coherence lengths
-    const double xi_F = 1.0;  // nm, short-range
-    const double xi_N = 10.0; // nm, long-range triplet
 
     // Initialize
     for (int i = 0; i < n_grid; ++i)

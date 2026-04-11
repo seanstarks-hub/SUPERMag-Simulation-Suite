@@ -1,0 +1,4 @@
+(library
+ (name supermag_pipeline)
+ (public_name supermag.pipeline)
+ (libraries supermag_types supermag_ffi))

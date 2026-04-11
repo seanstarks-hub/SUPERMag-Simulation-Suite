@@ -41,7 +41,7 @@ int supermag_gl_minimize(
     for (int step = 0; step < n_steps; ++step) {
         double max_residual = 0.0;
 
-        // Temporary arrays for update
+        // In-place Gauss-Seidel-like update  [EQ-11]
         for (int iy = 0; iy < ny; ++iy) {
             for (int ix = 0; ix < nx; ++ix) {
                 int idx = iy * nx + ix;
@@ -52,7 +52,7 @@ int supermag_gl_minimize(
                 int down  = ((iy - 1 + ny) % ny) * nx + ix;
                 int up    = ((iy + 1) % ny) * nx + ix;
 
-                // Laplacian
+                // Laplacian (reads mix old and already-updated values)
                 double lap_r = (psi_real[left] + psi_real[right]
                               + psi_real[down] + psi_real[up]
                               - 4.0 * psi_real[idx]) * inv_dx2;

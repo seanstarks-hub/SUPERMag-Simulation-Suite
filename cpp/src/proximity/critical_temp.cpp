@@ -57,7 +57,8 @@ static double thin_s_equation(double T, void *ctx) {
 
     double log_ratio = std::log(c->Tc0 / T);
 
-    // Complex pair-breaking parameter: A = gamma * K * Tc0 / (2*pi*T)
+    // Complex pair-breaking parameter: A = gamma * K * Tc0 / (2*pi*T)  [EQ-4]
+    // No eta = xi_S/d_S prefactor — gamma absorbs coupling strength.
     std::complex<double> half(0.5, 0.0);
     std::complex<double> A_complex = c->gamma * c->K * c->Tc0 / (2.0 * M_PI * T);
     A_complex += c->lambda_dep;
@@ -94,16 +95,22 @@ struct FominovContext {
 //   alpha_eff = gamma / (gamma_B + F_layer_impedance)
 //
 // For clarity, we implement the "effective alpha" approach:
-//   alpha(T) = gamma * K / (gamma_B * K + 1)  (normalized)
+//   alpha(T) = gamma * eta * K / (gamma_B * K + 1)  (normalized)
 // This reduces to thin-S when gamma_B → 0 and d_S → 0.
+//
+// NOTE: Simplified T-independent kernel. The full Fominov (PRB 66, 014507)
+// model has T-dependent q_S = sqrt(2*pi*T/D_S) in the S-layer impedance,
+// making the kernel frequency-dependent. This implementation uses a single
+// kernel evaluation at fixed d_F, which is valid when d_S >> xi_S.
 static double fominov_determinant(double T, void *ctx) {
     auto *c = static_cast<FominovContext*>(ctx);
     if (T <= 0.0) return -1.0;
 
     double log_ratio = std::log(c->Tc0 / T);
 
-    // Effective pair-breaking including interface barrier:
+    // Effective pair-breaking including interface barrier:  [EQ-5]
     // alpha = gamma * K / (1 + gamma_B * K)
+    // No eta = xi_S/d_S prefactor — gamma absorbs coupling strength.
     // This is the Fominov formula accounting for finite barrier transparency.
     std::complex<double> one(1.0, 0.0);
     std::complex<double> alpha = c->gamma * c->K / (one + c->gamma_B * c->K);
@@ -136,12 +143,16 @@ int supermag_proximity_solve_tc(
     if (Tc0 <= 0.0 || xi_F <= 0.0)
         return SUPERMAG_ERR_INVALID_DIM;
 
-    // Compute kernel
+    // Compute kernel  [EQ-2, EQ-3]
+    // 0-junction: coth kernel (S/F bilayer, PHASE_ZERO)
+    // π-junction: tanh kernel (semi-infinite F, PHASE_PI)
     std::complex<double> K;
     if (params->phase == SUPERMAG_PHASE_ZERO) {
         K = supermag::kernel_coth(d_F, xi_F);
-    } else {
+    } else if (params->phase == SUPERMAG_PHASE_PI) {
         K = supermag::kernel_tanh(d_F, xi_F);
+    } else {
+        return SUPERMAG_ERR_INVALID_MODEL;
     }
 
     double lambda_dep = supermag_depairing_total(depairing);

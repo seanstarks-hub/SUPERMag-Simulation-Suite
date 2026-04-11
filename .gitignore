@@ -34,6 +34,3 @@ __pycache__/
 Thumbs.db
 
 # Packaging
-*.egg-info/
-dist/
-*.whl

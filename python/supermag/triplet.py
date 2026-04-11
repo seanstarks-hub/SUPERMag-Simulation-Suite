@@ -33,7 +33,8 @@ except ImportError:
     pass
 
 
-def solve(n_layers, thicknesses, magnetization_angles, n_grid=200):
+def solve(n_layers, thicknesses, magnetization_angles, n_grid=200,
+          xi_F=1.0, xi_N=10.0):
     """
     Compute spin-triplet pair correlations in a magnetic multilayer.
 
@@ -51,6 +52,10 @@ def solve(n_layers, thicknesses, magnetization_angles, n_grid=200):
         Magnetization direction in each layer (rad), shape (n_layers,).
     n_grid : int, optional
         Total spatial grid points. Default: 200.
+    xi_F : float, optional
+        Short-range (ferromagnetic) coherence length (nm). Default: 1.0.
+    xi_N : float, optional
+        Long-range (triplet) coherence length (nm). Default: 10.0.
 
     Returns
     -------
@@ -59,10 +64,11 @@ def solve(n_layers, thicknesses, magnetization_angles, n_grid=200):
     f_triplet : numpy.ndarray
         Equal-spin triplet pair amplitude |f↑↑(x)|.
     """
-    if _USE_NATIVE:
+    if _USE_NATIVE and xi_F == 1.0 and xi_N == 10.0:
         return _native_triplet_solve(
             n_layers, np.asarray(thicknesses, dtype=np.float64),
-            np.asarray(magnetization_angles, dtype=np.float64), n_grid)
+            np.asarray(magnetization_angles, dtype=np.float64),
+            n_grid)
 
     # Pure Python fallback
     thicknesses = np.asarray(thicknesses, dtype=np.float64)
@@ -70,10 +76,6 @@ def solve(n_layers, thicknesses, magnetization_angles, n_grid=200):
 
     total_thickness = np.sum(thicknesses)
     x = np.linspace(0, total_thickness, n_grid)
-
-    # Typical coherence lengths
-    xi_F = 1.0   # nm, short-range (ferromagnetic)
-    xi_N = 10.0  # nm, long-range (normal/triplet)
 
     # Compute f_triplet(x) by summing contributions from each interface
     f_triplet = np.zeros(n_grid)

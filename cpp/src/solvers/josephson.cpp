@@ -30,7 +30,7 @@ int supermag_josephson_cpr(
     // I_c ∝ exp(-d_F/xi_F) * cos(d_F/xi_F - π/4) [Buzdin]
     double I_c = decay * std::cos(ratio - pi / 4.0);
 
-    // Temperature factor from BCS gap
+    // Temperature factor from BCS gap  [KNOWN-LIMIT-2: hardcoded Tc_ref]
     double Tc_ref = 9.2;
     double Delta_0 = 1.764 * kB_meV * Tc_ref;
     double t_ratio = T / Tc_ref;

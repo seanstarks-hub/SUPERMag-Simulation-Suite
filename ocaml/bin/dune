@@ -1,0 +1,4 @@
+(executable
+ (name sweep_driver)
+ (public_name supermag-sweep)
+ (libraries supermag_pipeline supermag_ffi supermag_types))

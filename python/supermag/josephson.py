@@ -32,7 +32,7 @@ except ImportError:
     pass
 
 
-def current_phase_relation(d_F, xi_F, E_ex, T, n_phases=100):
+def current_phase_relation(d_F, xi_F, E_ex, T, n_phases=100, Tc0=9.2):
     """
     Compute Josephson current-phase relation I(φ) for an S/F/S junction.
 
@@ -48,6 +48,8 @@ def current_phase_relation(d_F, xi_F, E_ex, T, n_phases=100):
         Temperature (K).
     n_phases : int, optional
         Number of phase points from 0 to 2π.
+    Tc0 : float, optional
+        Bulk superconductor critical temperature (K). Default: 9.2 (Nb).
 
     Returns
     -------
@@ -56,7 +58,7 @@ def current_phase_relation(d_F, xi_F, E_ex, T, n_phases=100):
     I : numpy.ndarray
         Supercurrent array (normalized to max |I|=1), shape (n_phases,).
     """
-    if _USE_NATIVE:
+    if _USE_NATIVE and Tc0 == 9.2:
         return _native_josephson_cpr(d_F, xi_F, E_ex, T, n_phases)
 
     # Pure Python fallback — Buzdin model for S/F/S CPR
@@ -73,7 +75,7 @@ def current_phase_relation(d_F, xi_F, E_ex, T, n_phases=100):
 
     # Temperature factor from BCS gap Δ(T) = 1.764 kB Tc √(1−T/Tc)
     kB_meV = 8.617333262e-2  # meV/K
-    Tc_ref = 9.2  # K (Nb)
+    Tc_ref = Tc0
     Delta_0 = 1.764 * kB_meV * Tc_ref
     t_ratio = min(T / Tc_ref, 0.9999)
     Delta_T = Delta_0 * np.sqrt(max(1.0 - t_ratio, 0.0))

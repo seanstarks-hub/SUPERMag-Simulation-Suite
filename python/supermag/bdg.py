@@ -29,7 +29,7 @@ except ImportError:
     pass
 
 
-def solve(n_sites, t_hop, Delta, E_ex):
+def solve(n_sites, t_hop, Delta, E_ex, mu=0.0):
     """
     Diagonalize the BdG Hamiltonian on a 1D tight-binding lattice.
 
@@ -43,26 +43,29 @@ def solve(n_sites, t_hop, Delta, E_ex):
         Superconducting pairing potential (meV).
     E_ex : float
         Exchange splitting in ferromagnet region (meV).
+    mu : float, optional
+        Chemical potential (meV). Default: 0.0.
 
     Returns
     -------
     eigenvalues : numpy.ndarray
         BdG eigenvalues (meV), sorted. Length 2*n_sites.
     """
-    if _USE_NATIVE:
+    if _USE_NATIVE and mu == 0.0:
         return _native_bdg_solve(n_sites, t_hop, Delta, E_ex)
 
     # Pure Python fallback
     N = int(n_sites)
     Delta_eV = Delta * 1e-3  # meV → eV
     E_ex_eV = E_ex * 1e-3    # meV → eV
+    mu_eV = mu * 1e-3         # meV → eV
 
     H = np.zeros((2 * N, 2 * N), dtype=complex)
 
     # On-site terms
     for i in range(N):
-        H[i, i] = E_ex_eV               # electron (spin-up): +h
-        H[N + i, N + i] = -(-E_ex_eV)   # hole (spin-down): -(-h) = +h
+        H[i, i] = -mu_eV + E_ex_eV            # electron (spin-up): -µ + h
+        H[N + i, N + i] = mu_eV + E_ex_eV      # hole (spin-down): +µ + h
         # Pairing
         H[i, N + i] = Delta_eV
         H[N + i, i] = np.conj(Delta_eV)

@@ -6,12 +6,14 @@ find_package(pybind11 CONFIG REQUIRED)
 
 # Include directories for SUPERMag headers
 include_directories(${CMAKE_SOURCE_DIR}/../cpp/include)
+include_directories(${CMAKE_SOURCE_DIR}/../cpp/src)
 
 # Find the C library
 # Look for the pre-built static library
 find_library(SUPERMAG_LIBRARY 
     NAMES supermag
     PATHS ${CMAKE_SOURCE_DIR}/../build
+          ${CMAKE_BINARY_DIR}/../build
     NO_DEFAULT_PATH
     REQUIRED
 )

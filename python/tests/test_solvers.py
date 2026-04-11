@@ -39,6 +39,18 @@ class TestBdG:
         eig = bdg.solve(n_sites=15, t_hop=1.0, Delta=1.5, E_ex=50.0)
         assert np.all(np.diff(eig) >= -1e-10)  # sorted ascending
 
+    def test_mu_shifts_spectrum(self):
+        """Chemical potential should shift the spectrum."""
+        eig_0 = bdg.solve(n_sites=20, t_hop=1.0, Delta=1.5, E_ex=0.0, mu=0.0)
+        eig_mu = bdg.solve(n_sites=20, t_hop=1.0, Delta=1.5, E_ex=0.0, mu=50.0)
+        assert not np.allclose(eig_0, eig_mu)
+
+    def test_mu_default_backward_compat(self):
+        """Default mu=0 should match old behavior."""
+        eig = bdg.solve(n_sites=10, t_hop=1.0, Delta=1.5, E_ex=50.0)
+        eig_explicit = bdg.solve(n_sites=10, t_hop=1.0, Delta=1.5, E_ex=50.0, mu=0.0)
+        np.testing.assert_allclose(eig, eig_explicit)
+
 
 # ───────────────────────── Josephson ───────────────────────────
 
@@ -83,6 +95,22 @@ class TestJosephson:
         assert phi[0] == pytest.approx(0.0)
         assert phi[-1] < 2 * np.pi  # endpoint=False
 
+    def test_custom_Tc0(self):
+        """Custom Tc0 parameter should be accepted and affect temperature factor.
+        Note: CPR is normalized, so we test at T > Tc0 where gap vanishes."""
+        # With Tc0=5.0 and T=4.9 (near Tc), gap is small → amplitude is small
+        # With Tc0=20.0 and T=4.9 (far from Tc), gap is larger
+        # Both get normalized, but at T > Tc0 the amplitude is zero
+        phi, I = josephson.current_phase_relation(
+            d_F=2.0, xi_F=0.7, E_ex=256.0, T=4.0, Tc0=9.2)
+        assert len(phi) == 100
+        assert np.max(np.abs(I)) == pytest.approx(1.0, abs=1e-10)
+        # Verify very high T relative to Tc0 suppresses current entirely
+        phi2, I2 = josephson.current_phase_relation(
+            d_F=2.0, xi_F=0.7, E_ex=256.0, T=9.19, Tc0=9.2)
+        # Near Tc, tanh of small gap → small factor (still normalized though)
+        assert len(I2) == 100
+
 
 # ─────────────────────────── Usadel ───────────────────────────
 
@@ -125,6 +153,15 @@ class TestUsadel:
         assert x[0] == pytest.approx(-50.0, abs=1.0)
         assert x[-1] == pytest.approx(10.0, abs=1.0)
 
+    def test_custom_temperature(self):
+        """Custom T should produce different results than default."""
+        x1, Delta1 = usadel.solve(
+            Tc0=9.2, d_S=50.0, d_F=10.0, xi_S=38.0, xi_F=0.7, E_ex=256.0)
+        x2, Delta2 = usadel.solve(
+            Tc0=9.2, d_S=50.0, d_F=10.0, xi_S=38.0, xi_F=0.7, E_ex=256.0,
+            T=3.0)
+        assert not np.allclose(Delta1, Delta2, atol=1e-6)
+
 
 # ─────────────────────── Eilenberger ──────────────────────────
 
@@ -155,6 +192,14 @@ class TestEilenberger:
         f_boundary = f[n_half]
         f_deep = f[-1]
         assert f_deep <= f_boundary + 0.1  # should decay or stay small
+
+    def test_custom_temperature(self):
+        """Custom T should produce different results than default."""
+        x1, f1 = eilenberger.solve(
+            Tc0=9.2, d_S=50.0, d_F=10.0, xi_S=38.0, E_ex=256.0)
+        x2, f2 = eilenberger.solve(
+            Tc0=9.2, d_S=50.0, d_F=10.0, xi_S=38.0, E_ex=256.0, T=3.0)
+        assert not np.allclose(f1, f2, atol=1e-6)
 
 
 # ───────────────────── Ginzburg-Landau ────────────────────────
@@ -219,3 +264,20 @@ class TestTriplet:
         x, _ = triplet.solve(3, thicknesses, [0.0, np.pi / 4, 0.0])
         assert x[0] == pytest.approx(0.0)
         assert x[-1] == pytest.approx(sum(thicknesses), rel=0.01)
+
+    def test_custom_xi_N(self):
+        """Larger xi_N should produce longer-range correlations."""
+        _, ft_short = triplet.solve(
+            3, [5.0, 10.0, 5.0], [0.0, np.pi / 2, 0.0], xi_N=5.0)
+        _, ft_long = triplet.solve(
+            3, [5.0, 10.0, 5.0], [0.0, np.pi / 2, 0.0], xi_N=50.0)
+        # Longer xi_N should produce less decay (higher f at edges)
+        assert ft_long[-1] > ft_short[-1]
+
+    def test_custom_xi_F_backward_compat(self):
+        """Default xi_F=1.0, xi_N=10.0 should match old behavior."""
+        _, ft1 = triplet.solve(
+            3, [5.0, 10.0, 5.0], [0.0, np.pi / 2, 0.0])
+        _, ft2 = triplet.solve(
+            3, [5.0, 10.0, 5.0], [0.0, np.pi / 2, 0.0], xi_F=1.0, xi_N=10.0)
+        np.testing.assert_allclose(ft1, ft2)

@@ -6,6 +6,7 @@
 #include <cmath>
 #include <complex>
 #include <algorithm>
+#include <vector>
 
 extern "C" {
 
@@ -16,7 +17,7 @@ int supermag_usadel_solve(
 {
     if (!Delta_out || !x_out)
         return SUPERMAG_ERR_NULL_PTR;
-    if (n_grid <= 4 || xi_S <= 0 || xi_F <= 0)
+    if (n_grid <= 4 || n_grid > 100000 || xi_S <= 0 || xi_F <= 0)
         return SUPERMAG_ERR_INVALID_DIM;
 
     const double pi = 3.14159265358979323846;
@@ -32,9 +33,9 @@ int supermag_usadel_solve(
     for (int i = 0; i < n_F; ++i)
         x_out[n_S + i] = d_F * i / std::max(n_F - 1, 1);
 
-    // Work at T = 0.5 Tc0
-    double T = 0.5 * Tc0;
-    double Delta_T = Delta_0 * std::sqrt(1.0 - T / Tc0);
+    // Work at T = 0.5 * Tc0  [KNOWN-LIMIT-1]
+    double T_use = 0.5 * Tc0;
+    double Delta_T = Delta_0 * std::sqrt(1.0 - T_use / Tc0);
 
     // Initialize Delta
     for (int i = 0; i < n_S; ++i)
@@ -47,12 +48,10 @@ int supermag_usadel_solve(
 
     // Self-consistency iterations
     for (int iter = 0; iter < 30; ++iter) {
-        double theta_sum_real[2048];  // max grid size
-        if (n_grid > 2048) return SUPERMAG_ERR_INVALID_DIM;
-        for (int i = 0; i < n_grid; ++i) theta_sum_real[i] = 0.0;
+        std::vector<double> theta_sum_real(n_grid, 0.0);
 
         for (int nm = 0; nm < n_matsubara; ++nm) {
-            double omega_n = pi * kB_meV * T * (2 * nm + 1);
+            double omega_n = pi * kB_meV * T_use * (2 * nm + 1);
 
             double kappa_S = std::sqrt(2.0 * omega_n / (kB_meV * Tc0)) / xi_S;
             double theta_BCS = std::atan(Delta_T / omega_n);
@@ -94,7 +93,7 @@ int supermag_usadel_solve(
         double max_change = 0.0;
         for (int i = 0; i < n_S; ++i) {
             double Delta_new =
-                lambda_BCS * pi * kB_meV * T * theta_sum_real[i];
+                lambda_BCS * pi * kB_meV * T_use * theta_sum_real[i];
             double change = std::fabs(Delta_new - Delta_out[i]);
             if (change > max_change) max_change = change;
             Delta_out[i] = 0.3 * Delta_new + 0.7 * Delta_out[i];

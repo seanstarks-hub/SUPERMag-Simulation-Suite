@@ -6,7 +6,7 @@
 
 #include <cstddef>
 
-#if defined(__AVX2__) || (defined(_MSC_VER) && defined(__AVX2__))
+#if defined(__AVX2__)
 #include <immintrin.h>
 #endif
 
@@ -18,7 +18,7 @@ extern "C" {
  */
 void supermag_simd_vec_mul(const double* a, const double* b, double* out, int n) {
     int i = 0;
-#if defined(__AVX2__) || (defined(_MSC_VER) && defined(__AVX2__))
+#if defined(__AVX2__)
     for (; i + 3 < n; i += 4) {
         __m256d va = _mm256_loadu_pd(a + i);
         __m256d vb = _mm256_loadu_pd(b + i);
@@ -36,7 +36,7 @@ void supermag_simd_vec_mul(const double* a, const double* b, double* out, int n)
  */
 void supermag_simd_axpy(double scale, const double* x, double* out, int n) {
     int i = 0;
-#if defined(__AVX2__) || (defined(_MSC_VER) && defined(__AVX2__))
+#if defined(__AVX2__)
     __m256d vs = _mm256_set1_pd(scale);
     for (; i + 3 < n; i += 4) {
         __m256d vx = _mm256_loadu_pd(x + i);

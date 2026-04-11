@@ -1,0 +1,4 @@
+(library
+ (name supermag_ffi)
+ (public_name supermag.ffi)
+ (libraries ctypes ctypes.foreign))

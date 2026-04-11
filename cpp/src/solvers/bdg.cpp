@@ -9,7 +9,8 @@
 
 // Simple Jacobi eigenvalue algorithm for real symmetric matrices
 // (production code would use LAPACK dsyev)
-static void jacobi_eigvals(double* A, int n, double* eigvals, int max_iter = 200) {
+// Returns 0 if converged, -1 if max_iter reached without convergence.
+static int jacobi_eigvals(double* A, int n, double* eigvals, int max_iter = 200) {
     // Work on a copy
     std::vector<double> M(n * n);
     std::memcpy(M.data(), A, n * n * sizeof(double));
@@ -24,7 +25,12 @@ static void jacobi_eigvals(double* A, int n, double* eigvals, int max_iter = 200
                     max_off = std::fabs(M[i * n + j]);
                     p = i; q = j;
                 }
-        if (max_off < 1e-12) break;
+        if (max_off < 1e-12) {
+            for (int i = 0; i < n; ++i)
+                eigvals[i] = M[i * n + i];
+            std::sort(eigvals, eigvals + n);
+            return 0;  // converged
+        }
 
         // Compute rotation
         double app = M[p * n + p], aqq = M[q * n + q], apq = M[p * n + q];
@@ -44,9 +50,11 @@ static void jacobi_eigvals(double* A, int n, double* eigvals, int max_iter = 200
         }
     }
 
+    // Did not converge — still return best estimate
     for (int i = 0; i < n; ++i)
         eigvals[i] = M[i * n + i];
     std::sort(eigvals, eigvals + n);
+    return -1;  // not converged
 }
 
 extern "C" {
@@ -68,13 +76,13 @@ int supermag_bdg_solve(
     double Delta_eV = Delta * 1e-3;
     double E_ex_eV = E_ex * 1e-3;
 
-    // Build BdG matrix (real symmetric for s-wave real Δ)
+    // Build BdG matrix (real symmetric for s-wave real Δ)  [EQ-10]
     std::vector<double> H(dim * dim, 0.0);
 
     for (int i = 0; i < N; ++i) {
-        // Electron block: on-site = +E_ex
+        // Electron block: on-site = +E_ex  [KNOWN-LIMIT-3: no mu]
         H[i * dim + i] = E_ex_eV;
-        // Hole block: on-site = +E_ex (from -(-E_ex))
+        // Hole block: on-site = +E_ex
         H[(N + i) * dim + (N + i)] = E_ex_eV;
         // Pairing
         H[i * dim + (N + i)] = Delta_eV;
@@ -91,11 +99,14 @@ int supermag_bdg_solve(
     }
 
     // Diagonalize
-    jacobi_eigvals(H.data(), dim, eigenvalues_out);
+    int jrc = jacobi_eigvals(H.data(), dim, eigenvalues_out);
 
     // Convert eV → meV
     for (int i = 0; i < dim; ++i)
         eigenvalues_out[i] *= 1e3;
+
+    if (jrc != 0)
+        return SUPERMAG_ERR_NO_CONVERGE;
 
     return SUPERMAG_OK;
 }

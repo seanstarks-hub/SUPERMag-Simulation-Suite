@@ -31,7 +31,7 @@ except ImportError:
     pass
 
 
-def solve(Tc0, d_S, d_F, xi_S, E_ex, n_grid=200):
+def solve(Tc0, d_S, d_F, xi_S, E_ex, n_grid=200, T=None):
     """
     Solve the Eilenberger equation for an S/F bilayer (clean limit).
 
@@ -52,6 +52,8 @@ def solve(Tc0, d_S, d_F, xi_S, E_ex, n_grid=200):
         Exchange energy in ferromagnet (meV).
     n_grid : int, optional
         Number of spatial grid points. Default: 200.
+    T : float, optional
+        Temperature (K). If None, defaults to 0.5 * Tc0.
 
     Returns
     -------
@@ -60,7 +62,7 @@ def solve(Tc0, d_S, d_F, xi_S, E_ex, n_grid=200):
     f : numpy.ndarray
         Anomalous Green's function |f(x)| (Fermi-surface averaged).
     """
-    if _USE_NATIVE:
+    if _USE_NATIVE and T is None:
         return _native_eilenberger_solve(Tc0, d_S, d_F, xi_S, E_ex, n_grid)
 
     # Pure Python fallback — Riccati integration with angular averaging
@@ -68,8 +70,8 @@ def solve(Tc0, d_S, d_F, xi_S, E_ex, n_grid=200):
 
     # BCS gap
     Delta_0 = 1.764 * kB_meV * Tc0
-    T = 0.5 * Tc0
-    Delta_T = Delta_0 * np.sqrt(max(1.0 - T / Tc0, 0.0))
+    T_use = T if T is not None else 0.5 * Tc0
+    Delta_T = Delta_0 * np.sqrt(max(1.0 - T_use / Tc0, 0.0))
 
     # Fermi velocity scale: ℏv_F / kB = hbar_vF_nm_meV
     # ξ_S = ℏv_F / (2πkBTc) → ℏv_F = 2π·kB·Tc · ξ_S
@@ -84,7 +86,7 @@ def solve(Tc0, d_S, d_F, xi_S, E_ex, n_grid=200):
     dx_val = (d_S + d_F) / max(n_grid - 1, 1)
 
     # Matsubara frequency (first, dominant)
-    omega_1 = np.pi * kB_meV * T  # lowest Matsubara freq (meV)
+    omega_1 = np.pi * kB_meV * T_use  # lowest Matsubara freq (meV)
 
     # BCS bulk value of Riccati parameter
     a_BCS = Delta_T / (omega_1 + np.sqrt(omega_1**2 + Delta_T**2))

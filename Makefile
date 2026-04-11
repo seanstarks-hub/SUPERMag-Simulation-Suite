@@ -18,12 +18,14 @@ LIB_SRCS = \
 	cpp/src/common/error.cpp \
 	cpp/src/common/constants.cpp \
 	cpp/src/common/digamma.cpp \
+	cpp/src/common/allocator.cpp \
 	cpp/src/proximity/pair_amplitude.cpp \
 	cpp/src/proximity/critical_temp.cpp \
 	cpp/src/proximity/kernels.cpp \
 	cpp/src/proximity/depairing.cpp \
 	cpp/src/linalg/tridiag.cpp \
 	cpp/src/linalg/simd_kernels.cpp \
+	cpp/src/linalg/eigen.cpp \
 	cpp/src/solvers/usadel.cpp \
 	cpp/src/solvers/eilenberger.cpp \
 	cpp/src/solvers/bdg.cpp \
@@ -45,12 +47,18 @@ TEST_BINS = $(patsubst cpp/test/%.cpp,build/test/%$(EXE_EXT),$(TEST_SRCS))
 
 build: $(STATIC_LIB)
 
+ifeq ($(OS),Windows_NT)
+MKDIR_P = if not exist "$(subst /,\,$1)" mkdir "$(subst /,\,$1)"
+else
+MKDIR_P = mkdir -p $1
+endif
+
 build/obj/%$(OBJ_EXT): cpp/%.cpp
-	@mkdir -p $(dir $@)
+	@$(call MKDIR_P,$(dir $@))
 	$(call compile_obj)
 
 $(STATIC_LIB): $(LIB_OBJS)
-	@mkdir -p $(dir $@)
+	@$(call MKDIR_P,$(dir $@))
 	$(call archive_lib)
 
 # ── C++ Tests ────────────────────────────────────────────────
@@ -63,7 +71,7 @@ test: $(TEST_BINS)
 	@echo "All C++ tests passed."
 
 build/test/%$(EXE_EXT): cpp/test/%.cpp $(STATIC_LIB)
-	@mkdir -p $(dir $@)
+	@$(call MKDIR_P,$(dir $@))
 	$(call link_exe)
 
 # ── Python ───────────────────────────────────────────────────
@@ -84,7 +92,16 @@ docs:
 	@echo "See docs/ for existing theory and tutorial documents."
 
 # ── Clean ────────────────────────────────────────────────────
+ifeq ($(OS),Windows_NT)
+clean:
+	if exist build rmdir /s /q build
+	if exist dist rmdir /s /q dist
+	if exist _skbuild rmdir /s /q _skbuild
+	for /r . %%d in (__pycache__) do @if exist "%%d" rmdir /s /q "%%d"
+	del /s /q *.pyc 2>nul || ver >nul
+else
 clean:
 	rm -rf build/ dist/ _skbuild/
 	find . -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null || true
 	find . -name "*.pyc" -delete 2>/dev/null || true
+endif
