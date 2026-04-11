@@ -97,7 +97,7 @@ open Supermag_types
 (** Apply a swept parameter value to a proximity_params record. *)
 let apply_param (p : Params.proximity_params) param value =
   match param with
-  | Sweep_d_F -> { p with d_s = p.d_s }  (* d_F is in the batch array, not in params *)
+  | Sweep_d_F -> p  (* d_F is in the batch array, not in params *)
   | Sweep_d_S -> { p with d_s = value }
   | Sweep_gamma -> { p with gamma = value }
   | Sweep_gamma_B -> { p with gamma_b = value }
@@ -115,6 +115,7 @@ let apply_param (p : Params.proximity_params) param value =
     For other parameters, [d_f_array] must be provided. *)
 let tc_parameter_sweep param sweep_values ~(params : Params.proximity_params)
     ?(d_f_array = [|1.0|]) ?(depairing = Params.no_depairing) () =
+  let config_name = sweep_param_to_string param in
   match param with
   | Sweep_d_F ->
     (* sweep_values IS the d_F array *)
@@ -127,7 +128,9 @@ let tc_parameter_sweep param sweep_values ~(params : Params.proximity_params)
       let p = apply_param params param sweep_values.(i) in
       match Supermag_ffi.Solvers.solve_tc ~params:p ~d_f_array ~depairing () with
       | Ok r -> r.tc_values
-      | Error msg -> Array.make n_df Float.nan |> fun a -> ignore msg; a
+      | Error msg ->
+        Printf.eprintf "Warning: solver error at %s=%.6g: %s\n%!" config_name sweep_values.(i) msg;
+        Array.make n_df Float.nan
     ) in
     (* Return the first d_F's Tc curve as function of swept param *)
     let tc_vals = Array.init n_sweep (fun i -> all_tc.(i).(0)) in
@@ -152,6 +155,10 @@ let tc_phase_diagram param1 values1 param2 values2
       in
       match Supermag_ffi.Solvers.solve_tc ~params:p2 ~d_f_array:d_f_arr ~depairing () with
       | Ok r -> r.tc_values.(0)
-      | Error _ -> Float.nan
+      | Error msg ->
+        Printf.eprintf "Warning: phase diagram solver error at (%s=%.6g, %s=%.6g): %s\n%!"
+          (sweep_param_to_string param1) values1.(i)
+          (sweep_param_to_string param2) values2.(j) msg;
+        Float.nan
     )
   )

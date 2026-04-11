@@ -101,3 +101,5 @@ jobs:
 
       - name: Run OCaml tests
         run: cd ocaml && opam exec -- dune runtest
+        env:
+          LD_LIBRARY_PATH: ${{ github.workspace }}/build
