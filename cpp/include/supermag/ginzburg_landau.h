@@ -7,7 +7,7 @@
 extern "C" {
 #endif
 
-/* TODO: Ginzburg-Landau free energy functional minimization.
+/* Ginzburg-Landau free energy functional minimization.
  * Vortex states, mixed-state configurations, domain structures near Tc. */
 int supermag_gl_minimize(
     double alpha, double beta, double kappa,

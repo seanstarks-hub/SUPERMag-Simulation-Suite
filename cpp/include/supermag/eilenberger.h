@@ -7,7 +7,7 @@
 extern "C" {
 #endif
 
-/* TODO: Eilenberger clean-limit solver
+/* Eilenberger clean-limit solver
  * Riccati parameterization for numerical stability. */
 int supermag_eilenberger_solve(
     double Tc0, double d_S, double d_F,

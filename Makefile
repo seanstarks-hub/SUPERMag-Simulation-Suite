@@ -43,7 +43,7 @@ TEST_SRCS = cpp/test/test_proximity.cpp cpp/test/test_tridiag.cpp cpp/test/test_
 TEST_BINS = $(patsubst cpp/test/%.cpp,build/test/%$(EXE_EXT),$(TEST_SRCS))
 
 # ── Build ────────────────────────────────────────────────────
-.PHONY: build test pytest validate bench wheel docs clean
+.PHONY: build test pytest validate bench wheel docs clean shared ocaml ocaml-test
 
 build: $(STATIC_LIB)
 
@@ -60,6 +60,21 @@ build/obj/%$(OBJ_EXT): cpp/%.cpp
 $(STATIC_LIB): $(LIB_OBJS)
 	@$(call MKDIR_P,$(dir $@))
 	$(call archive_lib)
+
+# ── Shared Library (for ctypes FFI) ──────────────────────────
+ifeq ($(OS),Windows_NT)
+SHARED_LIB = build/supermag.dll
+$(SHARED_LIB): $(LIB_OBJS)
+	@$(call MKDIR_P,$(dir $@))
+	link /DLL /OUT:$@ $^
+else
+SHARED_LIB = build/libsupermag.so
+$(SHARED_LIB): $(LIB_OBJS)
+	@$(call MKDIR_P,$(dir $@))
+	$(CXX) -shared -o $@ $^ -lm
+endif
+
+shared: $(SHARED_LIB)
 
 # ── C++ Tests ────────────────────────────────────────────────
 test: $(TEST_BINS)
@@ -90,6 +105,13 @@ wheel:
 docs:
 	@echo "Documentation generation not yet configured."
 	@echo "See docs/ for existing theory and tutorial documents."
+
+# ── OCaml ────────────────────────────────────────────────────
+ocaml: shared
+	cd ocaml && dune build
+
+ocaml-test: ocaml
+	cd ocaml && dune runtest
 
 # ── Clean ────────────────────────────────────────────────────
 ifeq ($(OS),Windows_NT)

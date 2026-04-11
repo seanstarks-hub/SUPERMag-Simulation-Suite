@@ -7,7 +7,7 @@
 extern "C" {
 #endif
 
-/* TODO: Spin-triplet superconductivity solver.
+/* Spin-triplet superconductivity solver.
  * Long-range triplet correlations from inhomogeneous magnetization.
  * Spin-active interface boundary conditions. */
 int supermag_triplet_solve(

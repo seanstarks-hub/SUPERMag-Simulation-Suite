@@ -7,7 +7,7 @@
 extern "C" {
 #endif
 
-/* TODO: BdG tight-binding Hamiltonian diagonalization
+/* BdG tight-binding Hamiltonian diagonalization
  * For ultra-thin layers, strong spin-orbit coupling, interface roughness. */
 int supermag_bdg_solve(
     int n_sites, double t_hop, double Delta, double E_ex,

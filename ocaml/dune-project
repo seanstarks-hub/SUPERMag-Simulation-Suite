@@ -1,2 +1,12 @@
 (lang dune 3.0)
 (name supermag)
+(generate_opam_files true)
+
+(package
+ (name supermag)
+ (depends
+  (ocaml (>= 5.0))
+  (ctypes (>= 0.20))
+  (ctypes-foreign (>= 0.20))
+  (cmdliner (>= 1.2))
+  (alcotest (and :with-test (>= 1.7)))))

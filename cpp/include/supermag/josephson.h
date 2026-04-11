@@ -7,7 +7,7 @@
 extern "C" {
 #endif
 
-/* TODO: Josephson current-phase relation (CPR) for S/F/S junctions.
+/* Josephson current-phase relation (CPR) for S/F/S junctions.
  * 0-pi transition detection as function of F-layer thickness and temperature. */
 int supermag_josephson_cpr(
     double d_F, double xi_F, double E_ex, double T,

@@ -7,7 +7,7 @@
 extern "C" {
 #endif
 
-/* TODO: Usadel diffusive-limit solver
+/* Usadel diffusive-limit solver
  * Self-consistency loop for superconducting order parameter Delta(x)
  * with Kupriyanov-Lukichev boundary conditions at S/F interfaces. */
 int supermag_usadel_solve(

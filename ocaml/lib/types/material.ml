@@ -17,8 +17,45 @@ type ferromagnet = {
 
 type material = SC of superconductor | FM of ferromagnet
 
+(* ── Superconductors ─────────────────────────────────── *)
+
 let nb : superconductor =
   { name = "Nb"; tc = 9.2; xi_s = 38.0; lambda_l = 39.0; delta_0 = 1.55 }
 
+let pb : superconductor =
+  { name = "Pb"; tc = 7.2; xi_s = 83.0; lambda_l = 37.0; delta_0 = 1.35 }
+
+let al : superconductor =
+  { name = "Al"; tc = 1.2; xi_s = 1600.0; lambda_l = 16.0; delta_0 = 0.18 }
+
+let all_superconductors = [nb; pb; al]
+
+(* ── Ferromagnets ────────────────────────────────────── *)
+
 let fe : ferromagnet =
   { name = "Fe"; e_ex = 256.0; xi_f = 0.7; d_f = 2.5e-4 }
+
+let co : ferromagnet =
+  { name = "Co"; e_ex = 309.0; xi_f = 0.5; d_f = 1.8e-4 }
+
+let ni : ferromagnet =
+  { name = "Ni"; e_ex = 75.0; xi_f = 2.3; d_f = 5.0e-4 }
+
+let py : ferromagnet =
+  { name = "Py"; e_ex = 20.0; xi_f = 5.0; d_f = 3.0e-4 }
+
+let cuni : ferromagnet =
+  { name = "CuNi"; e_ex = 5.0; xi_f = 10.0; d_f = 4.0e-4 }
+
+let cu043ni057 : ferromagnet =
+  { name = "Cu0.43Ni0.57"; e_ex = 11.2; xi_f = 4.2; d_f = 4.0e-4 }
+
+let all_ferromagnets = [fe; co; ni; py; cuni; cu043ni057]
+
+(* ── Lookup ──────────────────────────────────────────── *)
+
+let get_superconductor name =
+  List.find_opt (fun s -> s.name = name) all_superconductors
+
+let get_ferromagnet name =
+  List.find_opt (fun f -> f.name = name) all_ferromagnets

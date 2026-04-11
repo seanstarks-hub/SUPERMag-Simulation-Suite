@@ -27,6 +27,7 @@ jobs:
           arch: x64
 
       - name: Build C++ library
+        shell: cmd
         run: |
           mkdir build\obj\src\common
           mkdir build\obj\src\proximity
@@ -55,6 +56,7 @@ jobs:
           lib /OUT:build\supermag.lib build\obj\src\common\error.obj build\obj\src\common\constants.obj build\obj\src\common\digamma.obj build\obj\src\common\allocator.obj build\obj\src\proximity\pair_amplitude.obj build\obj\src\proximity\critical_temp.obj build\obj\src\proximity\kernels.obj build\obj\src\proximity\depairing.obj build\obj\src\linalg\tridiag.obj build\obj\src\linalg\simd_kernels.obj build\obj\src\linalg\eigen.obj build\obj\src\solvers\usadel.obj build\obj\src\solvers\eilenberger.obj build\obj\src\solvers\bdg.obj build\obj\src\solvers\ginzburg_landau.obj build\obj\src\solvers\josephson.obj build\obj\src\solvers\triplet.obj build\obj\src\solvers\root_scalar.obj build\obj\src\solvers\determinant.obj
 
       - name: Run C++ tests
+        shell: cmd
         run: |
           cl /std:c++17 /O2 /arch:AVX2 /EHsc /W4 /I cpp/include /I cpp/src /Febuild\test\test_proximity.exe cpp\test\test_proximity.cpp build\supermag.lib
           cl /std:c++17 /O2 /arch:AVX2 /EHsc /W4 /I cpp/include /I cpp/src /Febuild\test\test_tridiag.exe cpp\test\test_tridiag.cpp build\supermag.lib
@@ -76,3 +78,26 @@ jobs:
 
       - name: Run pytest
         run: python -m pytest python/tests/ -v
+
+  ocaml-build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up OCaml
+        uses: ocaml/setup-ocaml@v3
+        with:
+          ocaml-compiler: "5.1"
+
+      - name: Install opam dependencies
+        run: |
+          opam install ctypes ctypes-foreign cmdliner alcotest --yes
+
+      - name: Build C++ shared library
+        run: make shared
+
+      - name: Build OCaml project
+        run: cd ocaml && opam exec -- dune build
+
+      - name: Run OCaml tests
+        run: cd ocaml && opam exec -- dune runtest

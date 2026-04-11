@@ -1,4 +1,6 @@
 (library
  (name supermag_ffi)
  (public_name supermag.ffi)
- (libraries ctypes ctypes.foreign))
+ (libraries ctypes ctypes.foreign supermag_types)
+ (modules stubs solvers)
+ (c_library_flags (-L ../../build -lsupermag)))
