@@ -8,9 +8,11 @@ extern "C" {
 #endif
 
 /* BdG tight-binding Hamiltonian diagonalization
- * For ultra-thin layers, strong spin-orbit coupling, interface roughness. */
+ * For ultra-thin layers, strong spin-orbit coupling, interface roughness.
+ *
+ * mu: chemical potential (meV).  0.0 reproduces legacy behaviour. */
 int supermag_bdg_solve(
-    int n_sites, double t_hop, double Delta, double E_ex,
+    int n_sites, double t_hop, double Delta, double E_ex, double mu,
     double* eigenvalues_out, int* n_eigenvalues
 );
 

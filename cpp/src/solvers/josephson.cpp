@@ -8,7 +8,7 @@
 extern "C" {
 
 int supermag_josephson_cpr(
-    double d_F, double xi_F, double E_ex, double T,
+    double d_F, double xi_F, double E_ex, double T, double Tc0,
     int n_phases, double* phase_arr, double* current_out)
 {
     if (!phase_arr || !current_out)
@@ -30,8 +30,8 @@ int supermag_josephson_cpr(
     // I_c ∝ exp(-d_F/xi_F) * cos(d_F/xi_F - π/4) [Buzdin]
     double I_c = decay * std::cos(ratio - pi / 4.0);
 
-    // Temperature factor from BCS gap  [KNOWN-LIMIT-2: hardcoded Tc_ref]
-    double Tc_ref = 9.2;
+    // Temperature factor from BCS gap
+    double Tc_ref = (Tc0 > 0.0) ? Tc0 : 9.2;
     double Delta_0 = 1.764 * kB_meV * Tc_ref;
     double t_ratio = T / Tc_ref;
     if (t_ratio > 0.9999) t_ratio = 0.9999;

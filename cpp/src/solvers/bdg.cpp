@@ -60,7 +60,7 @@ static int jacobi_eigvals(double* A, int n, double* eigvals, int max_iter = 200)
 extern "C" {
 
 int supermag_bdg_solve(
-    int n_sites, double t_hop, double Delta, double E_ex,
+    int n_sites, double t_hop, double Delta, double E_ex, double mu,
     double* eigenvalues_out, int* n_eigenvalues)
 {
     if (!eigenvalues_out || !n_eigenvalues)
@@ -75,15 +75,16 @@ int supermag_bdg_solve(
     // Convert meV → eV
     double Delta_eV = Delta * 1e-3;
     double E_ex_eV = E_ex * 1e-3;
+    double mu_eV = mu * 1e-3;
 
     // Build BdG matrix (real symmetric for s-wave real Δ)  [EQ-10]
     std::vector<double> H(dim * dim, 0.0);
 
     for (int i = 0; i < N; ++i) {
-        // Electron block: on-site = +E_ex  [KNOWN-LIMIT-3: no mu]
-        H[i * dim + i] = E_ex_eV;
-        // Hole block: on-site = +E_ex
-        H[(N + i) * dim + (N + i)] = E_ex_eV;
+        // Electron block: on-site = -mu + E_ex  [EQ-10]
+        H[i * dim + i] = -mu_eV + E_ex_eV;
+        // Hole block: on-site = +mu + E_ex
+        H[(N + i) * dim + (N + i)] = mu_eV + E_ex_eV;
         // Pairing
         H[i * dim + (N + i)] = Delta_eV;
         H[(N + i) * dim + i] = Delta_eV;

@@ -32,24 +32,27 @@ val solve_tc_batch :
   d_f_arr:float array -> float array
 
 (** Usadel diffusive-limit solver.
+    [t]: temperature (K); defaults to -1.0 meaning 0.5*Tc0.
     Returns (Delta_out, x_out) arrays of length [n_grid]. *)
 val usadel_solve :
   tc0:float -> d_s:float -> d_f:float ->
   xi_s:float -> xi_f:float -> e_ex:float ->
-  n_grid:int -> float array * float array
+  ?t:float -> n_grid:int -> float array * float array
 
 (** Eilenberger clean-limit solver.
+    [t]: temperature (K); defaults to -1.0 meaning 0.5*Tc0.
     Returns (f_out, x_out) arrays of length [n_grid]. *)
 val eilenberger_solve :
   tc0:float -> d_s:float -> d_f:float ->
   xi_s:float -> e_ex:float ->
-  n_grid:int -> float array * float array
+  ?t:float -> n_grid:int -> float array * float array
 
 (** BdG tight-binding Hamiltonian diagonalization.
+    [mu]: chemical potential (meV); defaults to 0.0.
     Returns eigenvalues array (sorted, length = 2*n_sites). *)
 val bdg_solve :
   n_sites:int -> t_hop:float -> delta:float -> e_ex:float ->
-  float array
+  ?mu:float -> unit -> float array
 
 (** Ginzburg-Landau free energy functional minimization.
     Returns (psi_real, psi_imag) arrays of length [nx*ny]. *)
@@ -59,14 +62,18 @@ val gl_minimize :
   float array * float array
 
 (** Josephson current-phase relation for S/F/S junctions.
+    [tc0]: bulk Tc (K); defaults to 9.2 (Nb).
     Returns (phase_arr, current_out) arrays of length [n_phases]. *)
 val josephson_cpr :
   d_f:float -> xi_f:float -> e_ex:float -> t:float ->
-  n_phases:int -> float array * float array
+  ?tc0:float -> n_phases:int -> float array * float array
 
 (** Spin-triplet superconductivity solver.
+    [xi_f]: ferromagnetic coherence length (nm); defaults to 1.0.
+    [xi_n]: triplet coherence length (nm); defaults to 10.0.
     Returns (f_triplet_out, x_out) arrays of length [n_grid]. *)
 val triplet_solve :
   n_layers:int -> thicknesses:float array ->
   magnetization_angles:float array ->
+  ?xi_f:float -> ?xi_n:float ->
   n_grid:int -> float array * float array

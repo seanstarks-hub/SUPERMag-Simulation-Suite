@@ -5,6 +5,7 @@
 #include <cmath>
 #include <cstdlib>
 #include <algorithm>
+#include <vector>
 
 extern "C" {
 
@@ -38,10 +39,18 @@ int supermag_gl_minimize(
     int n_steps = 2000;
     double inv_dx2 = 1.0 / (dx * dx);
 
+    // Double-buffer: compute Laplacian from snapshot, then update  [EQ-11]
+    std::vector<double> buf_r(N), buf_i(N);
+
     for (int step = 0; step < n_steps; ++step) {
         double max_residual = 0.0;
 
-        // In-place Gauss-Seidel-like update  [EQ-11]
+        // Copy current state into read-only snapshot
+        for (int k = 0; k < N; ++k) {
+            buf_r[k] = psi_real[k];
+            buf_i[k] = psi_imag[k];
+        }
+
         for (int iy = 0; iy < ny; ++iy) {
             for (int ix = 0; ix < nx; ++ix) {
                 int idx = iy * nx + ix;
@@ -52,27 +61,27 @@ int supermag_gl_minimize(
                 int down  = ((iy - 1 + ny) % ny) * nx + ix;
                 int up    = ((iy + 1) % ny) * nx + ix;
 
-                // Laplacian (reads mix old and already-updated values)
-                double lap_r = (psi_real[left] + psi_real[right]
-                              + psi_real[down] + psi_real[up]
-                              - 4.0 * psi_real[idx]) * inv_dx2;
-                double lap_i = (psi_imag[left] + psi_imag[right]
-                              + psi_imag[down] + psi_imag[up]
-                              - 4.0 * psi_imag[idx]) * inv_dx2;
+                // Laplacian from snapshot (consistent Euler step)
+                double lap_r = (buf_r[left] + buf_r[right]
+                              + buf_r[down] + buf_r[up]
+                              - 4.0 * buf_r[idx]) * inv_dx2;
+                double lap_i = (buf_i[left] + buf_i[right]
+                              + buf_i[down] + buf_i[up]
+                              - 4.0 * buf_i[idx]) * inv_dx2;
 
-                double abs2 = psi_real[idx] * psi_real[idx]
-                            + psi_imag[idx] * psi_imag[idx];
+                double abs2 = buf_r[idx] * buf_r[idx]
+                            + buf_i[idx] * buf_i[idx];
 
                 // dψ/dt = -αψ - β|ψ|²ψ + ξ²∇²ψ
-                double dpsi_r = -alpha * psi_real[idx]
-                              - beta * abs2 * psi_real[idx]
+                double dpsi_r = -alpha * buf_r[idx]
+                              - beta * abs2 * buf_r[idx]
                               + xi2 * lap_r;
-                double dpsi_i = -alpha * psi_imag[idx]
-                              - beta * abs2 * psi_imag[idx]
+                double dpsi_i = -alpha * buf_i[idx]
+                              - beta * abs2 * buf_i[idx]
                               + xi2 * lap_i;
 
-                psi_real[idx] += dt * dpsi_r;
-                psi_imag[idx] += dt * dpsi_i;
+                psi_real[idx] = buf_r[idx] + dt * dpsi_r;
+                psi_imag[idx] = buf_i[idx] + dt * dpsi_i;
 
                 double res = std::sqrt(dpsi_r * dpsi_r + dpsi_i * dpsi_i);
                 if (res > max_residual) max_residual = res;

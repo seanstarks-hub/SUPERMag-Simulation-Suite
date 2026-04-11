@@ -10,6 +10,7 @@ extern "C" {
 
 int supermag_triplet_solve(
     int n_layers, const double* thicknesses, const double* magnetization_angles,
+    double xi_F, double xi_N,
     int n_grid, double* f_triplet_out, double* x_out)
 {
     if (!thicknesses || !magnetization_angles || !f_triplet_out || !x_out)
@@ -17,9 +18,9 @@ int supermag_triplet_solve(
     if (n_layers < 2 || n_grid <= 0)
         return SUPERMAG_ERR_INVALID_DIM;
 
-    // Hardcoded coherence lengths  [KNOWN-LIMIT-4]
-    const double xi_F = 1.0;   // nm
-    const double xi_N = 10.0;  // nm
+    // Use caller-supplied coherence lengths, or defaults when <= 0
+    const double xi_F_use = (xi_F > 0.0) ? xi_F : 1.0;   // nm
+    const double xi_N_use = (xi_N > 0.0) ? xi_N : 10.0;  // nm
 
     // Total thickness
     double total = 0.0;
@@ -47,7 +48,7 @@ int supermag_triplet_solve(
         // Long-range triplet contribution from this interface
         for (int j = 0; j < n_grid; ++j) {
             double dist = std::fabs(x_out[j] - x_int);
-            f_triplet_out[j] += triplet_amp * std::exp(-dist / xi_N);
+            f_triplet_out[j] += triplet_amp * std::exp(-dist / xi_N_use);
         }
     }
 

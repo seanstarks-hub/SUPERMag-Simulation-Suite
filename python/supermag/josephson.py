@@ -58,8 +58,8 @@ def current_phase_relation(d_F, xi_F, E_ex, T, n_phases=100, Tc0=9.2):
     I : numpy.ndarray
         Supercurrent array (normalized to max |I|=1), shape (n_phases,).
     """
-    if _USE_NATIVE and Tc0 == 9.2:
-        return _native_josephson_cpr(d_F, xi_F, E_ex, T, n_phases)
+    if _USE_NATIVE:
+        return _native_josephson_cpr(d_F, xi_F, E_ex, T, Tc0, n_phases)
 
     # Pure Python fallback — Buzdin model for S/F/S CPR
     phi = np.linspace(0, 2 * np.pi, n_phases, endpoint=False)

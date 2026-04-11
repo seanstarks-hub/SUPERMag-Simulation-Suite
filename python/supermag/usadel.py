@@ -85,8 +85,9 @@ def solve(Tc0, d_S, d_F, xi_S, xi_F, E_ex, n_grid=200, T=None):
     Delta : numpy.ndarray
         Order parameter profile (meV), real.
     """
-    if _USE_NATIVE and T is None:
-        return _native_usadel_solve(Tc0, d_S, d_F, xi_S, xi_F, E_ex, n_grid)
+    if _USE_NATIVE:
+        T_val = T if T is not None else -1.0
+        return _native_usadel_solve(Tc0, d_S, d_F, xi_S, xi_F, E_ex, T_val, n_grid)
 
     # Pure Python fallback — linearized Usadel with Matsubara sum
     kB_meV = 8.617333262e-2  # meV/K

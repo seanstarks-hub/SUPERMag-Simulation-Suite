@@ -80,16 +80,16 @@ let c_pair_amplitude =
 let c_usadel_solve =
   foreign "supermag_usadel_solve"
     (double @-> double @-> double @-> double @-> double @-> double
-     @-> int @-> ptr double @-> ptr double @-> returning int)
+     @-> double @-> int @-> ptr double @-> ptr double @-> returning int)
 
 let c_eilenberger_solve =
   foreign "supermag_eilenberger_solve"
     (double @-> double @-> double @-> double @-> double
-     @-> int @-> ptr double @-> ptr double @-> returning int)
+     @-> double @-> int @-> ptr double @-> ptr double @-> returning int)
 
 let c_bdg_solve =
   foreign "supermag_bdg_solve"
-    (int @-> double @-> double @-> double
+    (int @-> double @-> double @-> double @-> double
      @-> ptr double @-> ptr int @-> returning int)
 
 let c_gl_minimize =
@@ -99,12 +99,12 @@ let c_gl_minimize =
 
 let c_josephson_cpr =
   foreign "supermag_josephson_cpr"
-    (double @-> double @-> double @-> double @-> int
+    (double @-> double @-> double @-> double @-> double @-> int
      @-> ptr double @-> ptr double @-> returning int)
 
 let c_triplet_solve =
   foreign "supermag_triplet_solve"
-    (int @-> ptr double @-> ptr double @-> int
+    (int @-> ptr double @-> ptr double @-> double @-> double @-> int
      @-> ptr double @-> ptr double @-> returning int)
 
 (* ── Helper: CArray to OCaml array ──────────────────── *)
@@ -178,27 +178,27 @@ let solve_tc_batch ~tc0 ~d_s ~xi_s ~xi_f ~gamma ~gamma_b ~e_ex ~d_f_coeff
   check_rc rc;
   carray_to_array n tc_out
 
-let usadel_solve ~tc0 ~d_s ~d_f ~xi_s ~xi_f ~e_ex ~n_grid =
+let usadel_solve ~tc0 ~d_s ~d_f ~xi_s ~xi_f ~e_ex ?(t = -1.0) ~n_grid =
   let delta_out = CArray.make double n_grid in
   let x_out = CArray.make double n_grid in
-  let rc = c_usadel_solve tc0 d_s d_f xi_s xi_f e_ex n_grid
+  let rc = c_usadel_solve tc0 d_s d_f xi_s xi_f e_ex t n_grid
       (CArray.start delta_out) (CArray.start x_out) in
   check_rc rc;
   (carray_to_array n_grid delta_out, carray_to_array n_grid x_out)
 
-let eilenberger_solve ~tc0 ~d_s ~d_f ~xi_s ~e_ex ~n_grid =
+let eilenberger_solve ~tc0 ~d_s ~d_f ~xi_s ~e_ex ?(t = -1.0) ~n_grid =
   let f_out = CArray.make double n_grid in
   let x_out = CArray.make double n_grid in
-  let rc = c_eilenberger_solve tc0 d_s d_f xi_s e_ex n_grid
+  let rc = c_eilenberger_solve tc0 d_s d_f xi_s e_ex t n_grid
       (CArray.start f_out) (CArray.start x_out) in
   check_rc rc;
   (carray_to_array n_grid f_out, carray_to_array n_grid x_out)
 
-let bdg_solve ~n_sites ~t_hop ~delta ~e_ex =
+let bdg_solve ~n_sites ~t_hop ~delta ~e_ex ?(mu = 0.0) () =
   let max_eig = 2 * n_sites in
   let eig_out = CArray.make double max_eig in
   let n_eig = allocate int 0 in
-  let rc = c_bdg_solve n_sites t_hop delta e_ex
+  let rc = c_bdg_solve n_sites t_hop delta e_ex mu
       (CArray.start eig_out) n_eig in
   check_rc rc;
   carray_to_array (!@n_eig) eig_out
@@ -212,15 +212,16 @@ let gl_minimize ~alpha ~beta ~kappa ~nx ~ny ~dx =
   check_rc rc;
   (carray_to_array n psi_real, carray_to_array n psi_imag)
 
-let josephson_cpr ~d_f ~xi_f ~e_ex ~t ~n_phases =
+let josephson_cpr ~d_f ~xi_f ~e_ex ~t ?(tc0 = 9.2) ~n_phases =
   let phase_arr = CArray.make double n_phases in
   let current_out = CArray.make double n_phases in
-  let rc = c_josephson_cpr d_f xi_f e_ex t n_phases
+  let rc = c_josephson_cpr d_f xi_f e_ex t tc0 n_phases
       (CArray.start phase_arr) (CArray.start current_out) in
   check_rc rc;
   (carray_to_array n_phases phase_arr, carray_to_array n_phases current_out)
 
-let triplet_solve ~n_layers ~thicknesses ~magnetization_angles ~n_grid =
+let triplet_solve ~n_layers ~thicknesses ~magnetization_angles
+    ?(xi_f = 1.0) ?(xi_n = 10.0) ~n_grid =
   let c_thick = CArray.make double n_layers in
   Array.iteri (fun i v -> CArray.set c_thick i v) thicknesses;
   let c_angles = CArray.make double n_layers in
@@ -228,7 +229,7 @@ let triplet_solve ~n_layers ~thicknesses ~magnetization_angles ~n_grid =
   let f_out = CArray.make double n_grid in
   let x_out = CArray.make double n_grid in
   let rc = c_triplet_solve n_layers
-      (CArray.start c_thick) (CArray.start c_angles) n_grid
+      (CArray.start c_thick) (CArray.start c_angles) xi_f xi_n n_grid
       (CArray.start f_out) (CArray.start x_out) in
   check_rc rc;
   (carray_to_array n_grid f_out, carray_to_array n_grid x_out)

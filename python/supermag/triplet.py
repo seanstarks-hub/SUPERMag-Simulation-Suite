@@ -64,10 +64,11 @@ def solve(n_layers, thicknesses, magnetization_angles, n_grid=200,
     f_triplet : numpy.ndarray
         Equal-spin triplet pair amplitude |f↑↑(x)|.
     """
-    if _USE_NATIVE and xi_F == 1.0 and xi_N == 10.0:
+    if _USE_NATIVE:
         return _native_triplet_solve(
             n_layers, np.asarray(thicknesses, dtype=np.float64),
             np.asarray(magnetization_angles, dtype=np.float64),
+            xi_F, xi_N,
             n_grid)
 
     # Pure Python fallback
@@ -89,17 +90,12 @@ def solve(n_layers, thicknesses, magnetization_angles, n_grid=200,
 
         # Triplet amplitude ∝ sin(α)
         # Generated at interface, decays as exp(-|x - x_int|/ξ_N) (long-range)
-        # Also a short-range singlet component that decays as exp/cos with ξ_F
         triplet_amplitude = np.sin(alpha)
-        singlet_amplitude = np.cos(alpha)
 
         dist = np.abs(x - x_int)
 
-        # Long-range equal-spin triplet
+        # Long-range equal-spin triplet  [EQ-12]
         f_long = np.abs(triplet_amplitude) * np.exp(-dist / xi_N)
-
-        # Short-range singlet/m_s=0 triplet (oscillatory decay)
-        f_short = np.abs(singlet_amplitude) * np.exp(-dist / xi_F) * np.cos(dist / xi_F)
 
         f_triplet += f_long
 

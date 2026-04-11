@@ -28,12 +28,12 @@ int main() {
     assert(supermag_const_e() > 0);
 
     // Verify solvers return appropriate error for null/invalid inputs
-    assert(supermag_usadel_solve(0,0,0,0,0,0,0,nullptr,nullptr) == SUPERMAG_ERR_NULL_PTR);
-    assert(supermag_eilenberger_solve(0,0,0,0,0,0,nullptr,nullptr) == SUPERMAG_ERR_NULL_PTR);
-    assert(supermag_bdg_solve(0,0,0,0,nullptr,nullptr) == SUPERMAG_ERR_NULL_PTR);
+    assert(supermag_usadel_solve(0,0,0,0,0,0,0,0,nullptr,nullptr) == SUPERMAG_ERR_NULL_PTR);
+    assert(supermag_eilenberger_solve(0,0,0,0,0,0,0,nullptr,nullptr) == SUPERMAG_ERR_NULL_PTR);
+    assert(supermag_bdg_solve(0,0,0,0,0,nullptr,nullptr) == SUPERMAG_ERR_NULL_PTR);
     assert(supermag_gl_minimize(0,0,0,0,0,0,nullptr,nullptr) == SUPERMAG_ERR_NULL_PTR);
-    assert(supermag_josephson_cpr(0,0,0,0,0,nullptr,nullptr) == SUPERMAG_ERR_NULL_PTR);
-    assert(supermag_triplet_solve(0,nullptr,nullptr,0,nullptr,nullptr) == SUPERMAG_ERR_NULL_PTR);
+    assert(supermag_josephson_cpr(0,0,0,0,0,0,nullptr,nullptr) == SUPERMAG_ERR_NULL_PTR);
+    assert(supermag_triplet_solve(0,nullptr,nullptr,0,0,0,nullptr,nullptr) == SUPERMAG_ERR_NULL_PTR);
 
     // Verify proximity enums and struct compile
     supermag_proximity_params_t p;

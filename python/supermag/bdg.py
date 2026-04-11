@@ -51,8 +51,8 @@ def solve(n_sites, t_hop, Delta, E_ex, mu=0.0):
     eigenvalues : numpy.ndarray
         BdG eigenvalues (meV), sorted. Length 2*n_sites.
     """
-    if _USE_NATIVE and mu == 0.0:
-        return _native_bdg_solve(n_sites, t_hop, Delta, E_ex)
+    if _USE_NATIVE:
+        return _native_bdg_solve(n_sites, t_hop, Delta, E_ex, mu)
 
     # Pure Python fallback
     N = int(n_sites)

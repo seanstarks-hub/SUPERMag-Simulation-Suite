@@ -13,6 +13,7 @@ extern "C" {
 int supermag_eilenberger_solve(
     double Tc0, double d_S, double d_F,
     double xi_S, double E_ex,
+    double T,
     int n_grid, double* f_out, double* x_out)
 {
     if (!f_out || !x_out)
@@ -23,8 +24,8 @@ int supermag_eilenberger_solve(
     const double pi = 3.14159265358979323846;
     const double kB_meV = 8.617333262e-2;
     const double Delta_0 = 1.764 * kB_meV * Tc0;
-    // Use T = 0.5 * Tc0  [KNOWN-LIMIT-1]
-    double T_use = 0.5 * Tc0;
+    // Use caller-supplied T, or default to 0.5*Tc0 when T <= 0
+    double T_use = (T > 0.0) ? T : 0.5 * Tc0;
     double Delta_T = Delta_0 * std::sqrt(1.0 - T_use / Tc0);
 
     // hbar*v_F = 2*pi*kB*Tc * xi_S
@@ -51,15 +52,19 @@ int supermag_eilenberger_solve(
     for (int i = 0; i < n_grid; ++i)
         f_out[i] = 0.0;
 
-    // Angular quadrature: Gauss-Legendre 8-point
-    const int n_angles = 8;
-    static const double gl_nodes[8] = {
-        -0.9602898565, -0.7966664774, -0.5255324099, -0.1834346425,
-         0.1834346425,  0.5255324099,  0.7966664774,  0.9602898565
+    // Angular quadrature: Gauss-Legendre 16-point (matches Python fallback)
+    const int n_angles = 16;
+    static const double gl_nodes[16] = {
+        -0.9894009349, -0.9445750230, -0.8656312024, -0.7554044084,
+        -0.6178762444, -0.4580167776, -0.2816035508, -0.0950125098,
+         0.0950125098,  0.2816035508,  0.4580167776,  0.6178762444,
+         0.7554044084,  0.8656312024,  0.9445750230,  0.9894009349
     };
-    static const double gl_weights[8] = {
-        0.1012285363, 0.2223810345, 0.3137066459, 0.3626837834,
-        0.3626837834, 0.3137066459, 0.2223810345, 0.1012285363
+    static const double gl_weights[16] = {
+        0.0271524594, 0.0622535239, 0.0951585117, 0.1246289713,
+        0.1495959888, 0.1691565194, 0.1826034150, 0.1894506105,
+        0.1894506105, 0.1826034150, 0.1691565194, 0.1495959888,
+        0.1246289713, 0.0951585117, 0.0622535239, 0.0271524594
     };
 
     double weight_sum = 0.0;

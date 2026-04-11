@@ -13,6 +13,7 @@ extern "C" {
 int supermag_usadel_solve(
     double Tc0, double d_S, double d_F,
     double xi_S, double xi_F, double E_ex,
+    double T,
     int n_grid, double* Delta_out, double* x_out)
 {
     if (!Delta_out || !x_out)
@@ -33,8 +34,8 @@ int supermag_usadel_solve(
     for (int i = 0; i < n_F; ++i)
         x_out[n_S + i] = d_F * i / std::max(n_F - 1, 1);
 
-    // Work at T = 0.5 * Tc0  [KNOWN-LIMIT-1]
-    double T_use = 0.5 * Tc0;
+    // Use caller-supplied T, or default to 0.5*Tc0 when T <= 0
+    double T_use = (T > 0.0) ? T : 0.5 * Tc0;
     double Delta_T = Delta_0 * std::sqrt(1.0 - T_use / Tc0);
 
     // Initialize Delta

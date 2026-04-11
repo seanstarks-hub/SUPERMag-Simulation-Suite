@@ -162,8 +162,8 @@ I(φ) = I_c · T_factor · sin(φ),  normalized to max|I|=1
 
 ### EQ-10: BdG Nambu Hamiltonian
 ```
-H_BdG = [[ +E_ex·I − t·tridiag,    Δ·I        ],
-          [ Δ*·I,                  +E_ex·I + t·tridiag ]]
+H_BdG = [[ −µ·I + E_ex·I − t·tridiag,    Δ·I        ],
+          [ Δ*·I,                  +µ·I + E_ex·I + t·tridiag ]]
 ```
 - Eigenvalues in meV (convert from eV after diagonalization)
 - C++ impl: `bdg.cpp` (Jacobi eigensolver, n ≤ 500)
@@ -174,27 +174,31 @@ H_BdG = [[ +E_ex·I − t·tridiag,    Δ·I        ],
 ∂ψ/∂t = −αψ − β|ψ|²ψ + ξ²∇²ψ
 Equilibrium: |ψ|² = −α/β  (uniform, α < 0)
 ```
-- C++ impl: `ginzburg_landau.cpp` (in-place Gauss-Seidel-like)
+- C++ impl: `ginzburg_landau.cpp` (double-buffered snapshot Euler)
 - Python impl: `ginzburg_landau.py` (np.roll snapshot Euler)
-- **Known divergence:** C++ updates in-place during Laplacian sweep;
-  Python uses array snapshot. Results may differ slightly.
+- Both use snapshot Euler (consistent Laplacian reads).
 
 ### EQ-12: Triplet amplitude at non-collinear interface
 ```
 f_↑↑(x) ∝ |sin(α)| · exp(−|x − x_int|/ξ_N)
 α = magnetization_angles[i+1] − magnetization_angles[i]
 ```
-- Hardcoded: ξ_F = 1.0 nm, ξ_N = 10.0 nm (both layers)
+- Defaults: ξ_F = 1.0 nm, ξ_N = 10.0 nm (configurable via API parameters)
 - C++ impl: `triplet.cpp`
 - Python impl: `triplet.py`
 
 ---
 
-## §3 — C API Signatures (Frozen)
+## §3 — C API Signatures
 
 These are the canonical C function signatures from `cpp/include/supermag/`.
 All wrappers (pybind11, Python fallback, OCaml FFI) must map to these
 exactly. Do NOT add parameters, change return types, or rename.
+
+**v0.2 changes:** `T` added to Usadel/Eilenberger, `Tc0` added to
+Josephson, `mu` added to BdG, `xi_F`/`xi_N` added to Triplet.
+New parameters use sentinel defaults (`T<=0` → 0.5·Tc0, `Tc0<=0` → 9.2,
+`mu=0` → no shift, `xi_F/xi_N<=0` → legacy defaults).
 
 ```c
 /* error.h */
@@ -222,17 +226,19 @@ int supermag_proximity_pair_amplitude(
 int supermag_usadel_solve(
     double Tc0, double d_S, double d_F,
     double xi_S, double xi_F, double E_ex,
+    double T,
     int n_grid, double* Delta_out, double* x_out);
 
 /* eilenberger.h */
 int supermag_eilenberger_solve(
     double Tc0, double d_S, double d_F,
     double xi_S, double E_ex,
+    double T,
     int n_grid, double* f_out, double* x_out);
 
 /* bdg.h */
 int supermag_bdg_solve(
-    int n_sites, double t_hop, double Delta, double E_ex,
+    int n_sites, double t_hop, double Delta, double E_ex, double mu,
     double* eigenvalues_out, int* n_eigenvalues);
 
 /* ginzburg_landau.h */
@@ -243,13 +249,14 @@ int supermag_gl_minimize(
 
 /* josephson.h */
 int supermag_josephson_cpr(
-    double d_F, double xi_F, double E_ex, double T,
+    double d_F, double xi_F, double E_ex, double T, double Tc0,
     int n_phases, double* phase_arr, double* current_out);
 
 /* triplet.h */
 int supermag_triplet_solve(
     int n_layers, const double* thicknesses,
     const double* magnetization_angles,
+    double xi_F, double xi_N,
     int n_grid, double* f_triplet_out, double* x_out);
 ```
 
@@ -353,40 +360,41 @@ Document these so the agent does not "fix" them in the wrong direction
 or silently reintroduce them.
 
 ### KNOWN-BUG-1: Python fallback kernel assignment is swapped
-**Status:** MUST FIX.
-`proximity.py` fallback assigns tanh to phase="zero" and coth to
-phase="pi". The C++ engine (`kernels.cpp` + `proximity.h` enum comment)
-is correct: PHASE_ZERO=coth, PHASE_PI=tanh.
-**Fix:** Swap the if/else in the Python fallback to match C++.
+**Status:** RESOLVED.
+Fixed: `proximity.py` fallback now correctly assigns coth to
+phase="zero" and tanh to phase="pi", matching C++ engine.
 
 ### KNOWN-BUG-2: Python fallback has extra η = ξ_S/d_S scaling
-**Status:** MUST FIX.
-`proximity.py` fallback multiplies α by `eta = xi_S / d_S`. The C++
-`thin_s_equation()` and `fominov_determinant()` do NOT include this
-factor. The C++ formula (EQ-4, EQ-5) is canonical.
-**Fix:** Remove the `eta` multiplication from the Python fallback.
+**Status:** RESOLVED.
+Fixed: `proximity.py` fallback no longer multiplies α by
+`eta = xi_S / d_S`. Matches C++ (EQ-4, EQ-5).
 
 ### KNOWN-BUG-3: scipy not declared in pyproject.toml
-**Status:** MUST FIX.
-`proximity.py` fallback imports `scipy.special.digamma`.
-`sweeps.py` imports `scipy.constants`.
-Neither is listed in `[project.dependencies]`.
+**Status:** RESOLVED.
+Fixed: `scipy>=1.8` is now listed in `[project.dependencies]`.
 
 ### KNOWN-LIMIT-1: Usadel/Eilenberger hardcode T = 0.5·Tc0
-Not a bug — intentional simplification for v0.1.
-Future: add `T` parameter to function signatures.
+**Status:** RESOLVED.
+Both C API signatures now accept a `T` parameter. When `T <= 0`,
+the solver uses 0.5·Tc0 for backward compatibility.
 
 ### KNOWN-LIMIT-2: Josephson CPR is first-harmonic only
 sin(φ) only. Higher harmonics needed for φ₀-junction states.
 
 ### KNOWN-LIMIT-3: BdG has no chemical potential (µ)
-On-site energy is only ±E_ex. No µ parameter.
+**Status:** RESOLVED.
+C API now accepts `mu` parameter. On-site energy is `−µ ± E_ex`.
+Legacy callers pass `mu = 0.0` to reproduce previous behaviour.
 
 ### KNOWN-LIMIT-4: Triplet hardcodes ξ_F=1, ξ_N=10 nm
-Not user-configurable in v0.1.
+**Status:** RESOLVED.
+C API now accepts `xi_F` and `xi_N` parameters. When `<= 0`, the
+solver uses the legacy defaults (1.0 nm and 10.0 nm).
 
 ### KNOWN-LIMIT-5: C++ GL solver uses in-place Gauss-Seidel
-Updates ψ during Laplacian computation (differs from Python np.roll).
+**Status:** RESOLVED.
+C++ now uses double-buffered snapshot Euler, matching the Python
+`np.roll` approach. Both produce consistent results.
 
 ### KNOWN-LIMIT-6: C++ Eilenberger/Usadel use stack arrays [2048]
 Should be std::vector for thread safety.
@@ -395,6 +403,12 @@ Should be std::vector for thread safety.
 The full Fominov model has T-dependent q_S·cot(q_S·d_S). Current
 implementation uses simplified α = γK/(1+γ_B·K). Documented in
 comments of critical_temp.cpp but not implemented.
+
+### KNOWN-LIMIT-8: Josephson CPR uses hardcoded Tc_ref when Tc0 not supplied
+**Status:** RESOLVED.
+C API now accepts `Tc0` parameter. When `Tc0 <= 0`, the solver falls
+back to 9.2 K (Nb). Python wrapper always passes through user-supplied
+`Tc0` value.
 
 ---
 
