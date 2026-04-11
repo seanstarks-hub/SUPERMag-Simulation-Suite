@@ -27,13 +27,13 @@ int main() {
     assert(supermag_const_mu_B() > 0);
     assert(supermag_const_e() > 0);
 
-    // Verify stubs return SUPERMAG_ERR_NO_CONVERGE
-    assert(supermag_usadel_solve(0,0,0,0,0,0,0,nullptr,nullptr) == SUPERMAG_ERR_NO_CONVERGE);
-    assert(supermag_eilenberger_solve(0,0,0,0,0,0,nullptr,nullptr) == SUPERMAG_ERR_NO_CONVERGE);
-    assert(supermag_bdg_solve(0,0,0,0,nullptr,nullptr) == SUPERMAG_ERR_NO_CONVERGE);
-    assert(supermag_gl_minimize(0,0,0,0,0,0,nullptr,nullptr) == SUPERMAG_ERR_NO_CONVERGE);
-    assert(supermag_josephson_cpr(0,0,0,0,0,nullptr,nullptr) == SUPERMAG_ERR_NO_CONVERGE);
-    assert(supermag_triplet_solve(0,nullptr,nullptr,0,nullptr,nullptr) == SUPERMAG_ERR_NO_CONVERGE);
+    // Verify solvers return appropriate error for null/invalid inputs
+    assert(supermag_usadel_solve(0,0,0,0,0,0,0,nullptr,nullptr) == SUPERMAG_ERR_NULL_PTR);
+    assert(supermag_eilenberger_solve(0,0,0,0,0,0,nullptr,nullptr) == SUPERMAG_ERR_NULL_PTR);
+    assert(supermag_bdg_solve(0,0,0,0,nullptr,nullptr) == SUPERMAG_ERR_NULL_PTR);
+    assert(supermag_gl_minimize(0,0,0,0,0,0,nullptr,nullptr) == SUPERMAG_ERR_NULL_PTR);
+    assert(supermag_josephson_cpr(0,0,0,0,0,nullptr,nullptr) == SUPERMAG_ERR_NULL_PTR);
+    assert(supermag_triplet_solve(0,nullptr,nullptr,0,nullptr,nullptr) == SUPERMAG_ERR_NULL_PTR);
 
     // Verify proximity enums and struct compile
     supermag_proximity_params_t p;
@@ -48,7 +48,7 @@ int main() {
     assert(supermag_depairing_total(&dp) == 0.0);
 
     std::printf("  PASS: all headers compile and link\n");
-    std::printf("  PASS: all stubs return ERR_NO_CONVERGE\n");
+    std::printf("  PASS: all solvers validate inputs\n");
     std::printf("  PASS: new error codes defined\n");
     std::printf("  PASS: proximity enums and structs work\n");
     std::printf("All stub tests passed!\n");
