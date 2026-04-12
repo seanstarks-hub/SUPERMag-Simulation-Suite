@@ -122,9 +122,14 @@ F(T) = ln(Tc0/T) − Re[ψ(1/2 + α) − ψ(1/2)]
 ### EQ-5: Fominov self-consistency equation (PRB 66, 014507)
 ```
 F(T) = ln(Tc0/T) − Re[ψ(1/2 + α) − ψ(1/2)]
-α = γ · K / (1 + γ_B · K) · Tc0 / (2π T) + λ_dep
+α = γ · K / (1 + γ_B · K + Ω_S(T)) · Tc0 / (2π T) + λ_dep
+
+Ω_S(T) = √(T/Tc0) · coth(√(T/Tc0) · d_S/ξ_S)
 ```
-- Reduces to EQ-4 when γ_B → 0.
+- T-dependent S-layer impedance Ω_S(T) accounts for finite-thickness
+  superconductor. At T→0: Ω_S→0, recovers simplified formula.
+  Thick-S limit (d_S≫ξ_S): Ω_S→√(T/Tc0). Thin-S limit: Ω_S→ξ_S/d_S.
+- Reduces to EQ-4 when γ_B → 0 and Ω_S → 0.
 - C++ impl: `critical_temp.cpp` → `fominov_determinant()`
 - Python impl: `proximity.py` fallback, `model="fominov"` branch
 
@@ -152,11 +157,20 @@ Recurrence: ψ(z) = ψ(z+1) − 1/z  (shift until |z| > 10)
 - C++ impl: `cpp/src/common/digamma.cpp`
 - Python fallback: `scipy.special.digamma` (MUST be in pyproject.toml)
 
-### EQ-9: Josephson CPR (Buzdin, first harmonic)
+### EQ-9: Josephson CPR (Matsubara frequency sum)
 ```
-I_c(d_F) ∝ exp(−d_F/ξ_F) · cos(d_F/ξ_F − π/4)
-I(φ) = I_c · T_factor · sin(φ),  normalized to max|I|=1
+I(φ) = T · Σ_n Re[ P_n · Δ²·sin(φ) / √((ω_n² + Δ²sin²(φ/2))·(ω_n² + Δ²)) ]
+
+P_n = exp(−q_n·d_F) · exp(iπ/4)           [F-layer propagator]
+q_n = √(2(ω_n/E_ex + i)) / ξ_F            [complex wave vector]
+ω_n = π·k_B·T·(2n+1)                      [Matsubara frequency]
+Δ(T) = 1.764·k_B·Tc0·√(1−T/Tc0)
 ```
+- Cutoff: ω_n > 20Δ or n > 500.
+- At T→0, n=0: recovers Buzdin first-harmonic sin(φ).
+- sin²(φ/2) in denominator generates higher harmonics.
+- Complex P_n phase produces 0-π oscillation with d_F/ξ_F.
+- Normalized to max|I|=1.
 - C++ impl: `josephson.cpp`
 - Python impl: `josephson.py`
 
@@ -328,11 +342,11 @@ python/tests/
 
 ### OCaml Orchestrator
 ```
-ocaml/lib/ffi/       stubs.ml, stubs.mli
+ocaml/lib/ffi/       stubs.ml, stubs.mli, solvers.ml
 ocaml/lib/pipeline/  sweep.ml
-ocaml/lib/types/     params.ml (types only)
+ocaml/lib/types/     params.ml, material.ml, result.ml, geometry.ml
 ocaml/bin/           sweep_driver.ml
-ocaml/test/          test_ffi.ml
+ocaml/test/          test_ffi.ml, test_chain.ml, test_sweep.ml
 ```
 
 ### Build & CI
@@ -348,8 +362,8 @@ python/pyproject.toml, python/CMakeLists.txt
 validation/run_validation.py
 validation/buzdin_1982/   params.json, expected/tc_vs_df.csv, expected/pair_amplitude.csv
 validation/ryazanov_2003/ params.json, expected/tc_vs_df.csv
-validation/radovic_1991/  (placeholder)
-validation/bergeret_2005/ (placeholder)
+validation/radovic_1991/  params.json, expected/tc_vs_df.csv
+validation/bergeret_2005/ params.json, expected/triplet_amplitude.csv
 ```
 
 ---
@@ -379,7 +393,9 @@ Both C API signatures now accept a `T` parameter. When `T <= 0`,
 the solver uses 0.5·Tc0 for backward compatibility.
 
 ### KNOWN-LIMIT-2: Josephson CPR is first-harmonic only
-sin(φ) only. Higher harmonics needed for φ₀-junction states.
+**Status:** RESOLVED.
+Replaced first-harmonic sin(φ) with Matsubara frequency sum (EQ-9).
+Higher harmonics arise naturally from sin²(φ/2) denominator.
 
 ### KNOWN-LIMIT-3: BdG has no chemical potential (µ)
 **Status:** RESOLVED.
@@ -397,12 +413,15 @@ C++ now uses double-buffered snapshot Euler, matching the Python
 `np.roll` approach. Both produce consistent results.
 
 ### KNOWN-LIMIT-6: C++ Eilenberger/Usadel use stack arrays [2048]
-Should be std::vector for thread safety.
+**Status:** RESOLVED.
+Both `usadel.cpp` and `eilenberger.cpp` now use `std::vector`.
+Static `const double` GL quadrature tables are compile-time constants.
 
 ### KNOWN-LIMIT-7: Fominov kernel is T-independent
-The full Fominov model has T-dependent q_S·cot(q_S·d_S). Current
-implementation uses simplified α = γK/(1+γ_B·K). Documented in
-comments of critical_temp.cpp but not implemented.
+**Status:** RESOLVED.
+Fominov determinant now includes T-dependent S-layer impedance
+Ω_S(T) = √(T/Tc0)·coth(√(T/Tc0)·d_S/ξ_S) in the α denominator
+(EQ-5). Both C++ and Python implementations updated.
 
 ### KNOWN-LIMIT-8: Josephson CPR uses hardcoded Tc_ref when Tc0 not supplied
 **Status:** RESOLVED.
@@ -432,8 +451,7 @@ are explicitly forbidden:
    EQ-* equation. There is exactly one formula per physical quantity.
 
 5. **Do not hardcode material constants** (Tc, ξ, E_ex) inside solver
-   functions. Use the parameters passed by the caller. Exception:
-   josephson.cpp Tc_ref=9.2 is KNOWN-LIMIT (documented in §6).
+   functions. Use the parameters passed by the caller.
 
 6. **Do not use `else` as a catch-all for phase/model selection.**
    Always explicitly match known values and raise/return an error

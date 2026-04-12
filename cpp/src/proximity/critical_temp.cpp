@@ -86,34 +86,41 @@ struct FominovContext {
 // The Fominov (PRB 66 014507) Tc equation for an S/F bilayer:
 //   ln(Tc0/Tc) = Re[ psi(1/2 + alpha) - psi(1/2) ]
 // where
-//   alpha = (gamma / gamma_B) / (1 + K_F^{-1} * Omega_S / gamma_B)
-//   Omega_S = sqrt(2*pi*Tc * n_omega) / (D_S) ... Matsubara
+//   alpha = gamma * K / (1 + gamma_B * K + Omega_S(T))
+//   Omega_S(T) = sqrt(T/Tc0) * coth(sqrt(T/Tc0) * d_S/xi_S)
 //
-// In the simplified form for the determinant:
-//   The effective pair-breaking from the F layer, transmitted through
-//   the interface with transparency gamma and barrier gamma_B:
-//   alpha_eff = gamma / (gamma_B + F_layer_impedance)
-//
-// For clarity, we implement the "effective alpha" approach:
-//   alpha(T) = gamma * eta * K / (gamma_B * K + 1)  (normalized)
-// This reduces to thin-S when gamma_B → 0 and d_S → 0.
-//
-// NOTE: Simplified T-independent kernel. The full Fominov (PRB 66, 014507)
-// model has T-dependent q_S = sqrt(2*pi*T/D_S) in the S-layer impedance,
-// making the kernel frequency-dependent. This implementation uses a single
-// kernel evaluation at fixed d_F, which is valid when d_S >> xi_S.
+// The S-layer thermal impedance Omega_S(T) captures the T-dependent
+// pair-breaking from finite S-layer thickness. It reduces to:
+//   - Omega_S → 0 as T → 0 (recovers simplified formula)
+//   - Omega_S → xi_S/d_S in the thin-S limit
+//   - Omega_S → sqrt(T/Tc0) in the thick-S limit (d_S >> xi_S)
 static double fominov_determinant(double T, void *ctx) {
     auto *c = static_cast<FominovContext*>(ctx);
     if (T <= 0.0) return -1.0;
 
     double log_ratio = std::log(c->Tc0 / T);
 
-    // Effective pair-breaking including interface barrier:  [EQ-5]
-    // alpha = gamma * K / (1 + gamma_B * K)
+    // S-layer thermal impedance  [EQ-5]
+    // Omega_S(T) = sqrt(T/Tc0) * coth(sqrt(T/Tc0) * d_S / xi_S)
+    double sqrt_t_ratio = std::sqrt(T / c->Tc0);
+    double qS_dS = sqrt_t_ratio * c->d_S / c->xi_S;
+    double Omega_S = 0.0;
+    if (c->xi_S > 0.0 && c->d_S > 0.0) {
+        // coth(x) = cosh(x)/sinh(x); for large x, coth → 1
+        if (qS_dS > 15.0) {
+            Omega_S = sqrt_t_ratio;  // thick-S limit
+        } else if (qS_dS < 1e-10) {
+            Omega_S = 0.0;  // T → 0 limit
+        } else {
+            Omega_S = sqrt_t_ratio * std::cosh(qS_dS) / std::sinh(qS_dS);
+        }
+    }
+
+    // Effective pair-breaking including interface barrier and S-layer impedance:
+    // alpha = gamma * K / (1 + gamma_B * K + Omega_S(T))
     // No eta = xi_S/d_S prefactor — gamma absorbs coupling strength.
-    // This is the Fominov formula accounting for finite barrier transparency.
     std::complex<double> one(1.0, 0.0);
-    std::complex<double> alpha = c->gamma * c->K / (one + c->gamma_B * c->K);
+    std::complex<double> alpha = c->gamma * c->K / (one + c->gamma_B * c->K + Omega_S);
 
     // Scale by temperature: the Matsubara frequency normalization
     alpha *= c->Tc0 / (2.0 * M_PI * T);

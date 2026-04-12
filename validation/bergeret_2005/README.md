@@ -6,5 +6,7 @@ F.S. Bergeret, A.F. Volkov, and K.B. Efetov,
 *Reviews of Modern Physics*, vol. 77, pp. 1321–1373, 2005.
 
 ## Status
-**TODO**: Expected data not yet generated. Requires triplet solver implementation
-for long-range triplet correlations in magnetic multilayers.
+**Implemented.** Validates equal-spin triplet amplitude |f↑↑(x)| in
+S/F1/N/F2/S multilayer with 90° magnetization misalignment (EQ-12).
+Layers: S(50 nm)/F1(5 nm)/N(20 nm)/F2(5 nm)/S(50 nm),
+ξ_F=1 nm, ξ_N=10 nm.

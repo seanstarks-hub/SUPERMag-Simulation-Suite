@@ -61,28 +61,58 @@ def current_phase_relation(d_F, xi_F, E_ex, T, n_phases=100, Tc0=9.2):
     if _USE_NATIVE:
         return _native_josephson_cpr(d_F, xi_F, E_ex, T, Tc0, n_phases)
 
-    # Pure Python fallback — Buzdin model for S/F/S CPR
+    # Pure Python fallback — Matsubara frequency sum for S/F/S CPR  [EQ-9]
     phi = np.linspace(0, 2 * np.pi, n_phases, endpoint=False)
 
-    # Complex wave vector in F layer: q = (1+i)/ξ_F
-    q = (1.0 + 1.0j) / xi_F
-
-    # Critical current kernel (Buzdin, diffusive limit):
-    #   I_c ∝ exp(-d_F/ξ_F) cos(d_F/ξ_F − π/4)
-    # which equals Re[exp(-q·d_F) · exp(iπ/4)]
-    Kc = np.exp(-q * d_F)
-    I_c = np.real(Kc * np.exp(1j * np.pi / 4))
-
-    # Temperature factor from BCS gap Δ(T) = 1.764 kB Tc √(1−T/Tc)
+    # BCS gap Δ(T) = 1.764·kB·Tc0·√(1−T/Tc0)
     kB_meV = 8.617333262e-2  # meV/K
     Tc_ref = Tc0
     Delta_0 = 1.764 * kB_meV * Tc_ref
     t_ratio = min(T / Tc_ref, 0.9999)
-    Delta_T = Delta_0 * np.sqrt(max(1.0 - t_ratio, 0.0))
-    T_factor = np.tanh(Delta_T / (2.0 * kB_meV * max(T, 0.01)))
+    Delta = Delta_0 * np.sqrt(max(1.0 - t_ratio, 0.0))
+    Delta2 = Delta * Delta
 
-    # First-harmonic CPR: I(φ) = I_c(d_F, T) sin(φ)
-    I_raw = I_c * T_factor * np.sin(phi)
+    # Temperature in meV for Matsubara sum
+    T_meV = kB_meV * max(T, 0.01)
+
+    # Matsubara frequency sum:
+    #   I(φ) = T_meV · Σ_n Re[ P_n · Δ²·sin(φ) /
+    #          √((ω_n² + Δ²·sin²(φ/2)) · (ω_n² + Δ²)) ]
+    #   P_n = exp(-q_n·d_F) · exp(iπ/4)
+    #   q_n = √(2·(ω_n/E_ex + i)) / ξ_F
+    #   ω_n = π·T_meV·(2n+1)
+    N_MAX = 500
+    omega_cut = 20.0 * Delta
+    phase_rot = np.exp(1j * np.pi / 4.0)
+
+    sin_phi = np.sin(phi)
+    sin_half = np.sin(phi / 2.0)
+    sin_half2 = sin_half * sin_half
+
+    I_raw = np.zeros(n_phases)
+
+    for n in range(N_MAX + 1):
+        omega_n = np.pi * T_meV * (2.0 * n + 1.0)
+        if omega_n > omega_cut and n > 0:
+            break
+
+        omega_n2 = omega_n * omega_n
+
+        # Complex wave vector at this Matsubara frequency  [EQ-1 generalized]
+        q_n = np.sqrt(2.0 * (omega_n / E_ex + 1.0j)) / xi_F
+
+        # F-layer propagator
+        P_n = np.exp(-q_n * d_F) * phase_rot
+
+        # Denominator: √(ω_n² + Δ²·sin²(φ/2)) · √(ω_n² + Δ²)
+        denom_phi = np.sqrt(omega_n2 + Delta2 * sin_half2)
+        denom_const = np.sqrt(omega_n2 + Delta2)
+
+        # Accumulate: Re[ P_n · Δ²·sin(φ) / (denom_phi · denom_const) ]
+        I_raw += np.real(P_n * Delta2 * sin_phi / (denom_phi * denom_const))
+
+    # Multiply by T_meV (Matsubara prefactor)
+    I_raw *= T_meV
 
     # Normalize to max |I| = 1
     max_I = np.max(np.abs(I_raw))

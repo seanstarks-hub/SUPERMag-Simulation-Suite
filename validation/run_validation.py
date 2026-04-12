@@ -19,6 +19,7 @@ import numpy as np
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "python"))
 
 from supermag.proximity import pair_amplitude, critical_temperature
+from supermag.triplet import solve as triplet_solve
 
 
 def run_buzdin_1982():
@@ -110,6 +111,68 @@ def run_ryazanov_2003():
     return results
 
 
+def run_radovic_1991():
+    """Validate against Radović (1991) Nb/Ni superlattice Tc(d_F)."""
+    base = os.path.join(os.path.dirname(__file__), "radovic_1991")
+    with open(os.path.join(base, "params.json")) as f:
+        params = json.load(f)
+
+    tolerance = params.get("tolerance", 1e-3)
+    results = []
+
+    tc_file = os.path.join(base, "expected", "tc_vs_df.csv")
+    if os.path.exists(tc_file):
+        expected = np.genfromtxt(tc_file, delimiter=",", skip_header=1)
+        d_F_expected = expected[:, 0]
+        Tc_expected = expected[:, 1]
+
+        Tc_computed = critical_temperature(
+            Tc0=params["Tc0_K"], d_S=params["d_S_nm"],
+            d_F_array=d_F_expected,
+            E_ex=params["E_ex_meV"],
+            xi_S=params["xi_S_nm"], xi_F=params["xi_F_nm"],
+            gamma=params.get("gamma", 0.3),
+            model=params.get("model", "thin_s"),
+        )
+
+        max_dev = np.max(np.abs(Tc_computed - Tc_expected)) / params["Tc0_K"]
+        passed = max_dev < tolerance
+        results.append(("Radovic1991/Tc_vs_dF", passed, max_dev, tolerance))
+
+    return results
+
+
+def run_bergeret_2005():
+    """Validate against Bergeret (2005) S/F1/N/F2/S triplet correlations."""
+    base = os.path.join(os.path.dirname(__file__), "bergeret_2005")
+    with open(os.path.join(base, "params.json")) as f:
+        params = json.load(f)
+
+    tolerance = params.get("tolerance", 1e-6)
+    results = []
+
+    ta_file = os.path.join(base, "expected", "triplet_amplitude.csv")
+    if os.path.exists(ta_file):
+        expected = np.genfromtxt(ta_file, delimiter=",", skip_header=1)
+        x_expected = expected[:, 0]
+        f_expected = expected[:, 1]
+
+        x_computed, f_computed = triplet_solve(
+            n_layers=params["n_layers"],
+            thicknesses=params["thicknesses_nm"],
+            magnetization_angles=params["magnetization_angles_rad"],
+            n_grid=params.get("n_grid", 200),
+            xi_F=params.get("xi_F_nm", 1.0),
+            xi_N=params.get("xi_N_nm", 10.0),
+        )
+
+        max_dev = np.max(np.abs(f_computed - f_expected))
+        passed = max_dev < tolerance
+        results.append(("Bergeret2005/triplet_amplitude", passed, max_dev, tolerance))
+
+    return results
+
+
 def main():
     all_results = []
 
@@ -127,6 +190,16 @@ def main():
         all_results.extend(run_ryazanov_2003())
     except Exception as e:
         all_results.append(("Ryazanov2003", False, str(e), "N/A"))
+
+    try:
+        all_results.extend(run_radovic_1991())
+    except Exception as e:
+        all_results.append(("Radovic1991", False, str(e), "N/A"))
+
+    try:
+        all_results.extend(run_bergeret_2005())
+    except Exception as e:
+        all_results.append(("Bergeret2005", False, str(e), "N/A"))
 
     # Report
     print()

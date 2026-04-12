@@ -6,5 +6,7 @@
     "xi_S_nm": 38.0,
     "xi_F_nm": 2.3,
     "E_ex_meV": 75.0,
-    "note": "Requires Usadel solver for full validation"
+    "gamma": 0.3,
+    "model": "thin_s",
+    "tolerance": 1e-3
 }

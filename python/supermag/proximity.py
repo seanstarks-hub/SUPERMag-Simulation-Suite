@@ -197,9 +197,12 @@ def critical_temperature(Tc0, d_S, d_F_array, E_ex, xi_S, xi_F,
         # Effective coupling  [EQ-4, EQ-5]
         # No eta = xi_S/d_S prefactor — gamma absorbs coupling strength.
         if model == "fominov" and gamma_B > 0:
-            alpha_K = gamma * K / (1.0 + gamma_B * K)
+            # Base kernel coupling (T-independent part)
+            alpha_K_base = gamma * K
+            use_fominov = True
         else:
             alpha_K = gamma * K
+            use_fominov = False
 
         # Brent-like scan for highest root of
         # F(T) = ln(Tc0/T) - Re[psi(0.5 + alpha*Tc0/(2*pi*T) + lambda_dep) - psi(0.5)]
@@ -210,7 +213,21 @@ def critical_temperature(Tc0, d_S, d_F_array, E_ex, xi_S, xi_F,
             T_a, T_b = T_vals[j], T_vals[j + 1]
 
             def _f(T):
-                A = alpha_K * Tc0 / (2.0 * np.pi * T) + lambda_dep
+                if use_fominov:
+                    # T-dependent S-layer impedance  [EQ-5]
+                    # Omega_S(T) = sqrt(T/Tc0) * coth(sqrt(T/Tc0) * d_S/xi_S)
+                    sqrt_t_ratio = np.sqrt(T / Tc0)
+                    qS_dS = sqrt_t_ratio * d_S / xi_S
+                    if qS_dS > 15.0:
+                        Omega_S = sqrt_t_ratio
+                    elif qS_dS < 1e-10:
+                        Omega_S = 0.0
+                    else:
+                        Omega_S = sqrt_t_ratio * np.cosh(qS_dS) / np.sinh(qS_dS)
+                    alpha_eff = alpha_K_base / (1.0 + gamma_B * K + Omega_S)
+                else:
+                    alpha_eff = alpha_K
+                A = alpha_eff * Tc0 / (2.0 * np.pi * T) + lambda_dep
                 psi_val = _digamma(complex(0.5 + A))
                 return np.log(Tc0 / T) - (psi_val - psi_half).real
 
