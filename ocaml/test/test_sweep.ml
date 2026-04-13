@@ -80,8 +80,58 @@ let test_sweep_param_parsing () =
     (Result.is_ok (Sweep.sweep_param_of_string "d_F"));
   Alcotest.(check bool) "gamma ok" true
     (Result.is_ok (Sweep.sweep_param_of_string "gamma"));
+  Alcotest.(check bool) "D_S ok" true
+    (Result.is_ok (Sweep.sweep_param_of_string "D_S"));
   Alcotest.(check bool) "bad err" true
     (Result.is_error (Sweep.sweep_param_of_string "banana"))
+
+let test_sweep_param_roundtrip () =
+  let params = ["d_F"; "d_S"; "D_S"; "gamma"; "gamma_B"; "E_ex"; "xi_F"; "Tc0"] in
+  List.iter (fun name ->
+    match Sweep.sweep_param_of_string name with
+    | Error _ -> Alcotest.fail (Printf.sprintf "parse %s" name)
+    | Ok p ->
+      Alcotest.(check string) (Printf.sprintf "%s roundtrip" name)
+        name (Sweep.sweep_param_to_string p)
+  ) params
+
+open Supermag_types
+
+let test_geometry_parsing () =
+  let cases = ["bilayer"; "trilayer"; "graded"; "domains"] in
+  List.iter (fun s ->
+    Alcotest.(check bool) (Printf.sprintf "geometry %s" s) true
+      (Result.is_ok (Params.geometry_of_string s))
+  ) cases;
+  Alcotest.(check bool) "geometry bad" true
+    (Result.is_error (Params.geometry_of_string "unknown"))
+
+let test_model_parsing () =
+  let cases = ["thin_s"; "fominov"; "fominov_multi"] in
+  List.iter (fun s ->
+    Alcotest.(check bool) (Printf.sprintf "model %s" s) true
+      (Result.is_ok (Params.model_of_string s))
+  ) cases;
+  Alcotest.(check bool) "model bad" true
+    (Result.is_error (Params.model_of_string "bogus"))
+
+let test_grade_profile_to_int () =
+  Alcotest.(check int) "Linear" 0 (Params.grade_profile_to_int Params.Linear);
+  Alcotest.(check int) "Exponential" 1 (Params.grade_profile_to_int Params.Exponential);
+  Alcotest.(check int) "Step" 2 (Params.grade_profile_to_int Params.Step)
+
+let test_geometry_to_int () =
+  Alcotest.(check int) "Bilayer" 0 (Params.geometry_to_int Params.Bilayer);
+  Alcotest.(check int) "Trilayer" 1 (Params.geometry_to_int Params.Trilayer);
+  Alcotest.(check int) "Graded" 2 (Params.geometry_to_int Params.Graded);
+  Alcotest.(check int) "Domains" 3 (Params.geometry_to_int Params.Domains)
+
+let test_material_rho () =
+  let sc = Material.nb in
+  Alcotest.(check bool) "Nb rho > 0" true (sc.rho > 0.0);
+  Alcotest.(check bool) "Nb d_s > 0" true (sc.d_s > 0.0);
+  let fm = Material.fe in
+  Alcotest.(check bool) "Fe rho > 0" true (fm.rho > 0.0)
 
 let () =
   Alcotest.run "Sweep" [
@@ -99,6 +149,14 @@ let () =
       Alcotest.test_case "count" `Quick test_adaptive_sweep_count;
     ];
     "param", [
-      Alcotest.test_case "parsing" `Quick test_sweep_param_parsing;
+      Alcotest.test_case "parsing"    `Quick test_sweep_param_parsing;
+      Alcotest.test_case "roundtrip"  `Quick test_sweep_param_roundtrip;
+    ];
+    "types", [
+      Alcotest.test_case "geometry_parsing"   `Quick test_geometry_parsing;
+      Alcotest.test_case "model_parsing"      `Quick test_model_parsing;
+      Alcotest.test_case "grade_profile_int"  `Quick test_grade_profile_to_int;
+      Alcotest.test_case "geometry_int"       `Quick test_geometry_to_int;
+      Alcotest.test_case "material_rho"       `Quick test_material_rho;
     ];
   ]

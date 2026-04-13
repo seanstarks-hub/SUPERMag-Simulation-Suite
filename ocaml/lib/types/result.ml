@@ -27,10 +27,20 @@ type cpr_result = {
   current : float array;  (** Normalized current *)
 }
 
+type optimization_result = {
+  d_f_optimal : float;  (** Optimal d_F thickness (nm) *)
+}
+
+type fit_result = {
+  chi2 : float;  (** Final chi-squared residual *)
+}
+
 type solver_result =
   | Profile of profile
   | TcCurve of tc_result
   | Eigenvalues of eigenvalue_result
   | OrderParameter2D of order_parameter_2d
   | CurrentPhase of cpr_result
+  | Optimization of optimization_result
+  | Fit of fit_result
   | Error of string

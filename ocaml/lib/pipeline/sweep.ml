@@ -67,6 +67,7 @@ let adaptive_sweep (config : sweep_config) (eval_fn : float -> float) : float ar
 type sweep_param =
   | Sweep_d_F
   | Sweep_d_S
+  | Sweep_D_S
   | Sweep_gamma
   | Sweep_gamma_B
   | Sweep_E_ex
@@ -76,6 +77,7 @@ type sweep_param =
 let sweep_param_of_string = function
   | "d_F" -> Ok Sweep_d_F
   | "d_S" -> Ok Sweep_d_S
+  | "D_S" -> Ok Sweep_D_S
   | "gamma" -> Ok Sweep_gamma
   | "gamma_B" -> Ok Sweep_gamma_B
   | "E_ex" -> Ok Sweep_E_ex
@@ -86,6 +88,7 @@ let sweep_param_of_string = function
 let sweep_param_to_string = function
   | Sweep_d_F -> "d_F"
   | Sweep_d_S -> "d_S"
+  | Sweep_D_S -> "D_S"
   | Sweep_gamma -> "gamma"
   | Sweep_gamma_B -> "gamma_B"
   | Sweep_E_ex -> "E_ex"
@@ -99,6 +102,7 @@ let apply_param (p : Params.proximity_params) param value =
   match param with
   | Sweep_d_F -> p  (* d_F is in the batch array, not in params *)
   | Sweep_d_S -> { p with d_s = value }
+  | Sweep_D_S -> { p with d_s_coeff = value }
   | Sweep_gamma -> { p with gamma = value }
   | Sweep_gamma_B -> { p with gamma_b = value }
   | Sweep_E_ex ->

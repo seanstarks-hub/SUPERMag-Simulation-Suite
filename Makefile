@@ -23,6 +23,10 @@ LIB_SRCS = \
 	cpp/src/proximity/critical_temp.cpp \
 	cpp/src/proximity/kernels.cpp \
 	cpp/src/proximity/depairing.cpp \
+	cpp/src/proximity/transfer_matrix.cpp \
+	cpp/src/proximity/kernel_snf.cpp \
+	cpp/src/proximity/kernel_graded.cpp \
+	cpp/src/proximity/kernel_domains.cpp \
 	cpp/src/linalg/tridiag.cpp \
 	cpp/src/linalg/simd_kernels.cpp \
 	cpp/src/linalg/eigen.cpp \
@@ -33,13 +37,23 @@ LIB_SRCS = \
 	cpp/src/solvers/josephson.cpp \
 	cpp/src/solvers/triplet.cpp \
 	cpp/src/solvers/root_scalar.cpp \
-	cpp/src/solvers/determinant.cpp
+	cpp/src/solvers/determinant.cpp \
+	cpp/src/proximity/spin_active.cpp \
+	cpp/src/proximity/depairing_models.cpp \
+	cpp/src/proximity/optimizer.cpp \
+	cpp/src/proximity/interface.cpp
 
 LIB_OBJS = $(patsubst cpp/%.cpp,build/obj/%$(OBJ_EXT),$(LIB_SRCS))
 STATIC_LIB = build/$(LIB_PREFIX)supermag$(LIB_EXT)
 
 TEST_SRCS = cpp/test/test_proximity.cpp cpp/test/test_tridiag.cpp cpp/test/test_stubs.cpp \
-	cpp/test/test_digamma.cpp cpp/test/test_root_scalar.cpp cpp/test/test_determinant.cpp
+	cpp/test/test_digamma.cpp cpp/test/test_root_scalar.cpp cpp/test/test_determinant.cpp \
+	cpp/test/test_transfer_matrix.cpp cpp/test/test_kernel_snf.cpp \
+	cpp/test/test_kernel_graded.cpp cpp/test/test_kernel_domains.cpp \
+	cpp/test/test_usadel.cpp cpp/test/test_eilenberger.cpp \
+	cpp/test/test_bdg.cpp cpp/test/test_ginzburg_landau.cpp \
+	cpp/test/test_josephson.cpp cpp/test/test_triplet.cpp \
+	cpp/test/test_depairing_models.cpp cpp/test/test_optimizer.cpp
 TEST_BINS = $(patsubst cpp/test/%.cpp,build/test/%$(EXE_EXT),$(TEST_SRCS))
 
 # ── Build ────────────────────────────────────────────────────
@@ -79,11 +93,15 @@ shared: $(SHARED_LIB)
 # ── C++ Tests ────────────────────────────────────────────────
 test: $(TEST_BINS)
 	@echo "Running C++ tests..."
+ifeq ($(OS),Windows_NT)
+	$(foreach t,$(TEST_BINS),$(subst /,\,$(t)) &&) echo "All C++ tests passed."
+else
 	@for t in $(TEST_BINS); do \
 		echo "--- $$t ---"; \
 		$$t || exit 1; \
 	done
 	@echo "All C++ tests passed."
+endif
 
 build/test/%$(EXE_EXT): cpp/test/%.cpp $(STATIC_LIB)
 	@$(call MKDIR_P,$(dir $@))

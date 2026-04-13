@@ -22,9 +22,10 @@ let solve_tc ~(params : Params.proximity_params) ~d_f_array
       let tc_arr = Stubs.solve_tc_batch
           ~tc0:params.tc0 ~d_s:params.d_s ~xi_s:params.xi_s ~xi_f:params.xi_f
           ~gamma:params.gamma ~gamma_b:params.gamma_b ~e_ex:params.e_ex
-          ~d_f_coeff:params.d_f_coeff
+          ~d_f_coeff:params.d_f_coeff ~d_s_coeff:params.d_s_coeff
           ~model:(Params.model_to_int params.model)
           ~phase:(Params.phase_to_int params.phase)
+          ~geometry:(Params.geometry_to_int params.geometry)
           ~depairing:(Params.depairing_to_tuple depairing)
           ~d_f_arr:d_f_array in
       Ok Result.{ d_f_values = d_f_array; tc_values = tc_arr; tc0 = params.tc0 }
@@ -41,19 +42,22 @@ let pair_amplitude ~d_f ~xi_f ~phase ~n_points =
       Ok Result.{ x; values = f }
     with Failure msg -> Error msg
 
-let usadel ~tc0 ~d_s ~d_f ~xi_s ~xi_f ~e_ex ~n_grid =
+let usadel ~tc0 ~d_s ~d_f ~xi_s ~xi_f ~e_ex ~t ~mode ~n_grid =
   if n_grid < 5 then Error "n_grid must be >= 5"
+  else if t <= 0.0 then Error "t must be > 0"
   else
     try
-      let (delta, x) = Stubs.usadel_solve ~tc0 ~d_s ~d_f ~xi_s ~xi_f ~e_ex ~n_grid in
+      let (delta, x) = Stubs.usadel_solve ~tc0 ~d_s ~d_f ~xi_s ~xi_f ~e_ex
+          ~t ~mode:(Params.usadel_mode_to_int mode) ~n_grid in
       Ok Result.{ x; values = delta }
     with Failure msg -> Error msg
 
-let eilenberger ~tc0 ~d_s ~d_f ~xi_s ~e_ex ~n_grid =
+let eilenberger ~tc0 ~d_s ~d_f ~xi_s ~e_ex ~t ~n_grid =
   if n_grid < 5 then Error "n_grid must be >= 5"
+  else if t <= 0.0 then Error "t must be > 0"
   else
     try
-      let (f, x) = Stubs.eilenberger_solve ~tc0 ~d_s ~d_f ~xi_s ~e_ex ~n_grid in
+      let (f, x) = Stubs.eilenberger_solve ~tc0 ~d_s ~d_f ~xi_s ~e_ex ~t ~n_grid in
       Ok Result.{ x; values = f }
     with Failure msg -> Error msg
 
@@ -65,34 +69,37 @@ let bdg ~n_sites ~t_hop ~delta ~e_ex =
       Ok Result.{ eigenvalues = eigs }
     with Failure msg -> Error msg
 
-let gl ~alpha ~beta ~kappa ~nx ~ny ~dx =
+let gl ~alpha ~beta ~kappa ~nx ~ny ~dx ~mode ~h_applied =
   if nx < 2 || ny < 2 then Error "nx and ny must be >= 2"
   else if dx <= 0.0 then Error "dx must be > 0"
   else
     try
-      let (psi_r, psi_i) = Stubs.gl_minimize ~alpha ~beta ~kappa ~nx ~ny ~dx in
+      let (psi_r, psi_i) = Stubs.gl_minimize ~alpha ~beta ~kappa ~nx ~ny ~dx
+          ~mode:(Params.gl_mode_to_int mode) ~h_applied in
       Ok Result.{ nx; ny; psi_real = psi_r; psi_imag = psi_i }
     with Failure msg -> Error msg
 
-let josephson ~d_f ~xi_f ~e_ex ~t ~n_phases =
+let josephson ~d_f ~xi_f ~e_ex ~t ~gamma_b ~n_phases =
   if n_phases < 2 then Error "n_phases must be >= 2"
   else if d_f <= 0.0 then Error "d_f must be > 0"
   else
     try
-      let (phi, current) = Stubs.josephson_cpr ~d_f ~xi_f ~e_ex ~t ~n_phases in
+      let (phi, current) = Stubs.josephson_cpr ~d_f ~xi_f ~e_ex ~t ~gamma_b ~n_phases in
       Ok Result.{ phi; current }
     with Failure msg -> Error msg
 
-let triplet ~n_layers ~thicknesses ~magnetization_angles ~n_grid =
+let triplet ~n_layers ~thicknesses ~magnetization_angles ~t ~mode ~n_grid =
   if n_layers < 2 then Error "n_layers must be >= 2"
   else if Array.length thicknesses <> n_layers then
     Error "thicknesses length must equal n_layers"
   else if Array.length magnetization_angles <> n_layers then
     Error "magnetization_angles length must equal n_layers"
   else if n_grid < 5 then Error "n_grid must be >= 5"
+  else if t <= 0.0 then Error "t must be > 0"
   else
     try
       let (f, x) = Stubs.triplet_solve
-          ~n_layers ~thicknesses ~magnetization_angles ~n_grid in
+          ~n_layers ~thicknesses ~magnetization_angles
+          ~t ~mode:(Params.triplet_mode_to_int mode) ~n_grid in
       Ok Result.{ x; values = f }
     with Failure msg -> Error msg

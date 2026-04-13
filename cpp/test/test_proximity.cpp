@@ -6,6 +6,13 @@
 #include <cassert>
 #include <vector>
 #include <cstring>
+#include <complex>
+
+// Forward-declare internal kernel functions for overflow tests
+namespace supermag {
+std::complex<double> kernel_coth(double d_F, double xi_F);
+std::complex<double> kernel_tanh(double d_F, double xi_F);
+}
 
 // ---------- pair_amplitude tests (new signature) ----------
 
@@ -69,6 +76,9 @@ static supermag_proximity_params_t make_default_params() {
     p.D_F = 2.5;       // nm^2/ps
     p.model = SUPERMAG_MODEL_THIN_S;
     p.phase = SUPERMAG_PHASE_ZERO;
+    p.geometry = SUPERMAG_GEOM_BILAYER;
+    p.geom_params = nullptr;
+    p.spin_active = nullptr;
     return p;
 }
 
@@ -162,6 +172,198 @@ void test_depairing_null() {
     std::printf("  PASS: test_depairing_null\n");
 }
 
+// ---------- overflow-safe kernel tests ----------
+
+void test_kernel_overflow_coth() {
+    // d_F/xi_F = 2000 would overflow raw sinh/cosh
+    auto K = supermag::kernel_coth(2000.0, 1.0);
+    assert(std::isfinite(K.real()));
+    assert(std::isfinite(K.imag()));
+    // In the asymptotic regime coth(z) → 1, so K → q = (1+i)/xi_F
+    auto q = std::complex<double>(1.0, 1.0) / 1.0;
+    assert(std::abs(K.real() - q.real()) < 1e-10);
+    assert(std::abs(K.imag() - q.imag()) < 1e-10);
+    std::printf("  PASS: test_kernel_overflow_coth\n");
+}
+
+void test_kernel_overflow_tanh() {
+    auto K = supermag::kernel_tanh(2000.0, 1.0);
+    assert(std::isfinite(K.real()));
+    assert(std::isfinite(K.imag()));
+    auto q = std::complex<double>(1.0, 1.0) / 1.0;
+    assert(std::abs(K.real() - q.real()) < 1e-10);
+    assert(std::abs(K.imag() - q.imag()) < 1e-10);
+    std::printf("  PASS: test_kernel_overflow_tanh\n");
+}
+
+void test_solve_tc_large_df() {
+    supermag_proximity_params_t p = make_default_params();
+    p.d_F = 5000.0;  // extreme d_F >> xi_F
+    double tc;
+    int rc = supermag_proximity_solve_tc(&p, nullptr, &tc);
+    assert(rc == SUPERMAG_OK);
+    assert(std::isfinite(tc));
+    assert(tc >= 0.0);
+    assert(tc <= p.Tc0);
+    std::printf("  PASS: test_solve_tc_large_df (Tc = %.4f K)\n", tc);
+}
+
+// ---------- physics-based depairing tests ----------
+
+void test_depairing_compute_zero_field() {
+    supermag_depairing_input_t input;
+    std::memset(&input, 0, sizeof(input));
+    input.Tc0 = 9.2;
+    input.Gamma_s = 0.0;
+    input.H = 0.0;
+    input.D = 2.5;
+    input.thickness = 50.0;
+    input.Gamma_so = 0.0;
+
+    supermag_depairing_t out;
+    int rc = supermag_depairing_compute(&input, &out);
+    assert(rc == SUPERMAG_OK);
+    // Zero field → zero Zeeman and orbital
+    assert(std::abs(out.zeeman) < 1e-15);
+    assert(std::abs(out.orbital) < 1e-15);
+    // Zero spin-flip/spin-orbit rates → zero AG and SO
+    assert(std::abs(out.ag) < 1e-15);
+    assert(std::abs(out.spin_orbit) < 1e-15);
+    std::printf("  PASS: test_depairing_compute_zero_field\n");
+}
+
+void test_depairing_compute_known_values() {
+    supermag_depairing_input_t input;
+    std::memset(&input, 0, sizeof(input));
+    input.Tc0 = 9.2;        // K (Nb)
+    input.Gamma_s = 0.1;    // meV
+    input.H = 1.0;          // Tesla
+    input.D = 2.5;          // nm^2/ps
+    input.thickness = 50.0; // nm
+    input.Gamma_so = 0.05;  // meV
+
+    supermag_depairing_t out;
+    int rc = supermag_depairing_compute(&input, &out);
+    assert(rc == SUPERMAG_OK);
+    // All channels should be positive
+    assert(out.ag > 0.0);
+    assert(out.zeeman > 0.0);
+    assert(out.orbital > 0.0);
+    assert(out.spin_orbit > 0.0);
+    // AG should be proportional to Gamma_s
+    assert(out.ag > out.spin_orbit * 1.5);  // Gamma_s > Gamma_so
+    std::printf("  PASS: test_depairing_compute_known_values (AG=%.4e, Z=%.4e, O=%.4e, SO=%.4e)\n",
+                out.ag, out.zeeman, out.orbital, out.spin_orbit);
+}
+
+void test_depairing_compute_null() {
+    supermag_depairing_t out;
+    int rc = supermag_depairing_compute(nullptr, &out);
+    assert(rc == SUPERMAG_ERR_NULL_PTR);
+    supermag_depairing_input_t input;
+    std::memset(&input, 0, sizeof(input));
+    input.Tc0 = 9.2;
+    rc = supermag_depairing_compute(&input, nullptr);
+    assert(rc == SUPERMAG_ERR_NULL_PTR);
+    std::printf("  PASS: test_depairing_compute_null\n");
+}
+
+void test_depairing_roundtrip() {
+    supermag_depairing_input_t input;
+    std::memset(&input, 0, sizeof(input));
+    input.Tc0 = 9.2;
+    input.Gamma_s = 0.1;
+    input.H = 0.5;
+    input.D = 3.0;
+    input.thickness = 30.0;
+    input.Gamma_so = 0.02;
+
+    supermag_depairing_t out;
+    int rc = supermag_depairing_compute(&input, &out);
+    assert(rc == SUPERMAG_OK);
+    double total = supermag_depairing_total(&out);
+    double sum = out.ag + out.zeeman + out.orbital + out.spin_orbit;
+    assert(std::abs(total - sum) < 1e-15);
+    std::printf("  PASS: test_depairing_roundtrip (total=%.4e)\n", total);
+}
+
+// ---------- kernel integration tests (new model dispatch) ----------
+
+void test_solve_tc_trilayer() {
+    supermag_proximity_params_t p = make_default_params();
+    p.geometry = SUPERMAG_GEOM_TRILAYER;
+
+    supermag_trilayer_params_t tri;
+    std::memset(&tri, 0, sizeof(tri));
+    tri.d_N = 5.0;       // 5 nm normal metal interlayer
+    tri.xi_N = 50.0;     // long coherence length
+    tri.R_B = 0.0;
+    p.geom_params = &tri;
+
+    double tc_tri;
+    int rc = supermag_proximity_solve_tc(&p, nullptr, &tc_tri);
+    assert(rc == SUPERMAG_OK);
+    assert(tc_tri >= 0.0);
+    assert(tc_tri <= p.Tc0);
+
+    // Compare with bilayer — trilayer with N interlayer should differ
+    supermag_proximity_params_t p2 = make_default_params();
+    double tc_bi;
+    supermag_proximity_solve_tc(&p2, nullptr, &tc_bi);
+    // Tc values should be distinct (N layer modifies kernel)
+    assert(std::abs(tc_tri - tc_bi) > 1e-6 || tc_tri == 0.0 || tc_bi == 0.0);
+
+    std::printf("  PASS: test_solve_tc_trilayer (Tc=%.4f vs bilayer %.4f K)\n", tc_tri, tc_bi);
+}
+
+void test_solve_tc_graded() {
+    supermag_proximity_params_t p = make_default_params();
+    p.geometry = SUPERMAG_GEOM_GRADED;
+
+    supermag_graded_params_t grade;
+    std::memset(&grade, 0, sizeof(grade));
+    grade.E_ex_surface = 10.0;    // meV at S/F interface
+    grade.E_ex_bulk = 5.0;    // meV at vacuum surface
+    grade.n_slabs = 10;
+    grade.profile = SUPERMAG_GRADE_LINEAR;
+    p.geom_params = &grade;
+
+    double tc;
+    int rc = supermag_proximity_solve_tc(&p, nullptr, &tc);
+    assert(rc == SUPERMAG_OK);
+    assert(tc >= 0.0);
+    assert(tc <= p.Tc0);
+    std::printf("  PASS: test_solve_tc_graded (Tc=%.4f K)\n", tc);
+}
+
+void test_solve_tc_domains() {
+    supermag_proximity_params_t p = make_default_params();
+    p.geometry = SUPERMAG_GEOM_DOMAINS;
+
+    supermag_domain_params_t dom;
+    std::memset(&dom, 0, sizeof(dom));
+    dom.domain_width = 5.0;
+    p.d_F = 10.0;  // total thickness = 2 domains
+    p.geom_params = &dom;
+
+    double tc;
+    int rc = supermag_proximity_solve_tc(&p, nullptr, &tc);
+    assert(rc == SUPERMAG_OK);
+    assert(tc >= 0.0);
+    assert(tc <= p.Tc0);
+    std::printf("  PASS: test_solve_tc_domains (Tc=%.4f K)\n", tc);
+}
+
+void test_solve_tc_trilayer_null_params() {
+    supermag_proximity_params_t p = make_default_params();
+    p.geometry = SUPERMAG_GEOM_TRILAYER;
+    p.geom_params = nullptr;  // should error
+    double tc;
+    int rc = supermag_proximity_solve_tc(&p, nullptr, &tc);
+    assert(rc == SUPERMAG_ERR_NULL_PTR);
+    std::printf("  PASS: test_solve_tc_trilayer_null_params\n");
+}
+
 int main() {
     std::printf("Running proximity tests...\n");
 
@@ -185,6 +387,23 @@ int main() {
     // depairing
     test_depairing_total();
     test_depairing_null();
+
+    // overflow-safe kernels
+    test_kernel_overflow_coth();
+    test_kernel_overflow_tanh();
+    test_solve_tc_large_df();
+
+    // physics-based depairing
+    test_depairing_compute_zero_field();
+    test_depairing_compute_known_values();
+    test_depairing_compute_null();
+    test_depairing_roundtrip();
+
+    // kernel integration (model dispatch)
+    test_solve_tc_trilayer();
+    test_solve_tc_graded();
+    test_solve_tc_domains();
+    test_solve_tc_trilayer_null_params();
 
     std::printf("All proximity tests passed!\n");
     return 0;

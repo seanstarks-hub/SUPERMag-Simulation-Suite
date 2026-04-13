@@ -22,6 +22,8 @@ namespace supermag {
 // Forward declarations from kernels.cpp
 std::complex<double> kernel_coth(double d_F, double xi_F);
 std::complex<double> kernel_tanh(double d_F, double xi_F);
+// Forward declaration from spin_active.cpp
+std::complex<double> apply_spin_active(const supermag_spin_active_t *sa, std::complex<double> K);
 }
 
 // Context struct passed to the root-finding callback
@@ -151,10 +153,38 @@ int supermag_proximity_solve_tc(
         return SUPERMAG_ERR_INVALID_DIM;
 
     // Compute kernel  [EQ-2, EQ-3]
-    // 0-junction: coth kernel (S/F bilayer, PHASE_ZERO)
-    // π-junction: tanh kernel (semi-infinite F, PHASE_PI)
+    // Standard bilayer: 0-junction coth, π-junction tanh
+    // Extended geometries use Phase 1 kernel functions (EQ-13, EQ-14, EQ-15)
     std::complex<double> K;
-    if (params->phase == SUPERMAG_PHASE_ZERO) {
+    if (params->geometry == SUPERMAG_GEOM_TRILAYER) {
+        // S/N/F trilayer kernel [EQ-13]
+        if (!params->geom_params)
+            return SUPERMAG_ERR_NULL_PTR;
+        auto *tri = static_cast<const supermag_trilayer_params_t*>(params->geom_params);
+        double Kr, Ki;
+        int krc = supermag_proximity_kernel_snf(d_F, xi_F, tri, params->phase, &Kr, &Ki);
+        if (krc != SUPERMAG_OK) return krc;
+        K = std::complex<double>(Kr, Ki);
+    } else if (params->geometry == SUPERMAG_GEOM_GRADED) {
+        // Graded ferromagnet kernel [EQ-14]
+        if (!params->geom_params)
+            return SUPERMAG_ERR_NULL_PTR;
+        auto *grade = static_cast<const supermag_graded_params_t*>(params->geom_params);
+        double Kr, Ki;
+        int krc = supermag_proximity_kernel_graded(d_F, xi_F, grade, params->phase, &Kr, &Ki);
+        if (krc != SUPERMAG_OK) return krc;
+        K = std::complex<double>(Kr, Ki);
+    } else if (params->geometry == SUPERMAG_GEOM_DOMAINS) {
+        // Magnetic domain kernel [EQ-15]
+        if (!params->geom_params)
+            return SUPERMAG_ERR_NULL_PTR;
+        auto *dom = static_cast<const supermag_domain_params_t*>(params->geom_params);
+        double Kr, Ki;
+        int krc = supermag_proximity_kernel_domains(d_F, xi_F, params->E_ex, dom,
+                                                     params->phase, &Kr, &Ki);
+        if (krc != SUPERMAG_OK) return krc;
+        K = std::complex<double>(Kr, Ki);
+    } else if (params->phase == SUPERMAG_PHASE_ZERO) {
         K = supermag::kernel_coth(d_F, xi_F);
     } else if (params->phase == SUPERMAG_PHASE_PI) {
         K = supermag::kernel_tanh(d_F, xi_F);
@@ -162,11 +192,23 @@ int supermag_proximity_solve_tc(
         return SUPERMAG_ERR_INVALID_MODEL;
     }
 
+    // Apply spin-active interface correction to kernel
+    if (params->spin_active) {
+        K = supermag::apply_spin_active(params->spin_active, K);
+    }
+
     double lambda_dep = supermag_depairing_total(depairing);
     double T_min = 0.01;
     double T_max = Tc0;
 
-    if (params->model == SUPERMAG_MODEL_THIN_S) {
+    // Self-consistency equation selection:
+    // Non-bilayer geometries use thin_s equation (kernel is the only difference)
+    int eq_model = params->model;
+    // Fominov multimode falls back to single-mode Fominov for now
+    if (eq_model == SUPERMAG_MODEL_FOMINOV_MULTI)
+        eq_model = SUPERMAG_MODEL_FOMINOV;
+
+    if (eq_model == SUPERMAG_MODEL_THIN_S) {
         ThinSContext ctx;
         ctx.Tc0 = Tc0;
         ctx.gamma = params->gamma;
@@ -179,7 +221,7 @@ int supermag_proximity_solve_tc(
         } else {
             *tc_out = root;
         }
-    } else if (params->model == SUPERMAG_MODEL_FOMINOV) {
+    } else if (eq_model == SUPERMAG_MODEL_FOMINOV) {
         FominovContext ctx;
         ctx.Tc0 = Tc0;
         ctx.d_S = params->d_S;

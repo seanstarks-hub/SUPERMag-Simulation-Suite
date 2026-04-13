@@ -38,7 +38,7 @@ let test_pair_amplitude_pi () =
 
 let test_bdg_eigenvalues () =
   let eigs = Supermag_ffi.Stubs.bdg_solve
-      ~n_sites:10 ~t_hop:1.0 ~delta:1.5 ~e_ex:50.0 in
+      ~n_sites:10 ~t_hop:1.0 ~delta:1.5 ~e_ex:50.0 () in
   Alcotest.(check int) "2*N eigenvalues" 20 (Array.length eigs);
   (* Check sorted *)
   let sorted = Array.to_list eigs |> List.sort Float.compare in
@@ -47,7 +47,7 @@ let test_bdg_eigenvalues () =
 
 let test_josephson_output () =
   let (phi, current) = Supermag_ffi.Stubs.josephson_cpr
-      ~d_f:1.0 ~xi_f:1.0 ~e_ex:100.0 ~t:4.0 ~n_phases:50 in
+      ~d_f:1.0 ~xi_f:1.0 ~e_ex:100.0 ~t:4.0 ~gamma_b:0.0 ~n_phases:50 in
   Alcotest.(check int) "phi length" 50 (Array.length phi);
   Alcotest.(check int) "current length" 50 (Array.length current);
   (* Max current magnitude should be ~1 (normalized) *)
@@ -61,7 +61,7 @@ let test_triplet_parallel () =
       ~n_layers:2
       ~thicknesses:[|5.0; 5.0|]
       ~magnetization_angles:[|0.0; 0.0|]
-      ~n_grid:20 in
+      ~t:4.0 ~mode:1 ~n_grid:20 in
   Alcotest.(check int) "f length" 20 (Array.length f_out);
   Alcotest.(check int) "x length" 20 (Array.length x_out);
   let max_f = Array.fold_left (fun m v -> Float.max m (Float.abs v)) 0.0 f_out in
@@ -71,7 +71,7 @@ let test_triplet_parallel () =
 let test_usadel_output () =
   let (delta, x) = Supermag_ffi.Stubs.usadel_solve
       ~tc0:9.2 ~d_s:50.0 ~d_f:5.0 ~xi_s:38.0 ~xi_f:0.7
-      ~e_ex:256.0 ~n_grid:20 in
+      ~e_ex:256.0 ~t:4.0 ~mode:1 ~n_grid:20 in
   Alcotest.(check int) "delta length" 20 (Array.length delta);
   Alcotest.(check int) "x length" 20 (Array.length x);
   (* Delta >= 0 everywhere *)
@@ -82,7 +82,7 @@ let test_usadel_output () =
 let test_eilenberger_output () =
   let (f, x) = Supermag_ffi.Stubs.eilenberger_solve
       ~tc0:9.2 ~d_s:50.0 ~d_f:5.0 ~xi_s:38.0
-      ~e_ex:256.0 ~n_grid:20 in
+      ~e_ex:256.0 ~t:4.0 ~n_grid:20 in
   Alcotest.(check int) "f length" 20 (Array.length f);
   Alcotest.(check int) "x length" 20 (Array.length x);
   (* f values should be bounded [0, 1] *)
@@ -94,7 +94,7 @@ let test_eilenberger_output () =
 let test_gl_output () =
   let (psi_r, psi_i) = Supermag_ffi.Stubs.gl_minimize
       ~alpha:(-1.0) ~beta:1.0 ~kappa:1.0
-      ~nx:10 ~ny:10 ~dx:0.5 in
+      ~nx:10 ~ny:10 ~dx:0.5 ~mode:0 ~h_applied:0.0 in
   Alcotest.(check int) "psi_real length" 100 (Array.length psi_r);
   Alcotest.(check int) "psi_imag length" 100 (Array.length psi_i)
 

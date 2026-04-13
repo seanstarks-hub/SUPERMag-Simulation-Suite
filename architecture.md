@@ -98,6 +98,7 @@ q = (1 + i) / ξ_F
 ```
 K₀(d_F, ξ_F) = q · coth(q · d_F) = q · cosh(q·d_F) / sinh(q·d_F)
 ```
+- Overflow-safe: for |Re(q·d_F)| > 3.0, uses asymptotic limit coth(z) → sgn(Re(z))
 - Phase enum: `SUPERMAG_PHASE_ZERO = 0`, Python `phase="zero"`
 - C++ impl: `kernels.cpp` → `kernel_coth()`
 - Python impl: `proximity.py` fallback, `phase="zero"` branch
@@ -106,6 +107,7 @@ K₀(d_F, ξ_F) = q · coth(q · d_F) = q · cosh(q·d_F) / sinh(q·d_F)
 ```
 K_π(d_F, ξ_F) = q · tanh(q · d_F) = q · sinh(q·d_F) / cosh(q·d_F)
 ```
+- Overflow-safe: for |Re(q·d_F)| > 3.0, uses asymptotic limit tanh(z) → sgn(Re(z))
 - Phase enum: `SUPERMAG_PHASE_PI = 1`, Python `phase="pi"`
 - C++ impl: `kernels.cpp` → `kernel_tanh()`
 - Python impl: `proximity.py` fallback, `phase="pi"` branch
@@ -149,6 +151,34 @@ phase=pi:    F(x) = exp(−x/ξ_F) · sin(x/ξ_F)
 - C++ impl: `depairing.cpp` → `supermag_depairing_total()`
 - Python impl: `proximity.py` → inline sum in fallback
 
+### EQ-7A: Abrikosov-Gorkov depairing (spin-flip scattering)
+```
+λ_AG = Γ_s / (2 · k_B · Tc0)
+```
+- Γ_s: spin-flip scattering rate (SI: Joules)
+- C++ impl: `depairing.cpp` → `supermag_depairing_compute()`
+
+### EQ-7B: Zeeman depairing (Pauli paramagnetic limit)
+```
+λ_Z = (μ_B · H)² / (2π · k_B · Tc0)²
+```
+- H: applied magnetic field (Tesla)
+- C++ impl: `depairing.cpp` → `supermag_depairing_compute()`
+
+### EQ-7C: Orbital depairing (thin-film limit)
+```
+λ_orb = D · (e·H)² · d² / (3 · ℏ² · 2π · k_B · Tc0)
+```
+- D: diffusion coefficient, d: film thickness
+- C++ impl: `depairing.cpp` → `supermag_depairing_compute()`
+
+### EQ-7D: Spin-orbit depairing
+```
+λ_SO = Γ_so / (2 · k_B · Tc0)
+```
+- Γ_so: spin-orbit scattering rate (SI: Joules)
+- C++ impl: `depairing.cpp` → `supermag_depairing_compute()`
+
 ### EQ-8: Digamma (ψ) function, complex argument
 ```
 Asymptotic: ψ(z) = ln(z) − 1/(2z) − Σ B_{2k}/(2k · z^{2k})
@@ -179,16 +209,20 @@ q_n = √(2(ω_n/E_ex + i)) / ξ_F            [complex wave vector]
 H_BdG = [[ −µ·I + E_ex·I − t·tridiag,    Δ·I        ],
           [ Δ*·I,                  +µ·I + E_ex·I + t·tridiag ]]
 ```
-- Eigenvalues in meV (convert from eV after diagonalization)
-- C++ impl: `bdg.cpp` (Jacobi eigensolver, n ≤ 500)
+- t_hop converted from eV to meV internally (×1e3); all computation in meV
+- Cyclic Jacobi eigensolver (systematic row-major sweeps, n ≤ 2000)
+- Optional eigenvector output via `eigenvectors_out` parameter (NULL to skip)
+- C++ impl: `bdg.cpp`
 - Python impl: `bdg.py` (`numpy.linalg.eigvalsh`)
 
 ### EQ-11: GL TDGL relaxation
 ```
 ∂ψ/∂t = −αψ − β|ψ|²ψ + ξ²∇²ψ
 Equilibrium: |ψ|² = −α/β  (uniform, α < 0)
+ξ² = 1/(2κ²)   (coherence length from GL parameter)
 ```
 - C++ impl: `ginzburg_landau.cpp` (double-buffered snapshot Euler)
+  Mode enum selects SCALAR (no gauge) or GAUGE (EQ-18) with applied field.
 - Python impl: `ginzburg_landau.py` (np.roll snapshot Euler)
 - Both use snapshot Euler (consistent Laplacian reads).
 
@@ -198,8 +232,110 @@ f_↑↑(x) ∝ |sin(α)| · exp(−|x − x_int|/ξ_N)
 α = magnetization_angles[i+1] − magnetization_angles[i]
 ```
 - Defaults: ξ_F = 1.0 nm, ξ_N = 10.0 nm (configurable via API parameters)
+- C++ now uses Usadel-based model (EQ-19) with dual triplet contributions
+- Temperature dependence via required `T` parameter and `mode` enum
 - C++ impl: `triplet.cpp`
 - Python impl: `triplet.py`
+
+### EQ-16: Nonlinear Usadel self-consistency (tridiagonal)
+```
+Δ(x) self-consistent via Newton-linearized finite-difference:
+  D·∂²Δ/∂x² − (ω_n + 1/(2τ_sf))·Δ + g·Δ_BCS = 0   (in S)
+  D·∂²Δ/∂x² − (ω_n + E_ex/ℏ)·Δ = 0                  (in F)
+
+Discretized: A·δΔ = −F   (tridiag system, Thomas algorithm)
+Matsubara sum: ω_n = π·k_B·T·(2n+1)  cut at ω_n > 20Δ or n > 500
+Self-consistency: adaptive mixing (0.3 → 0.5), 100 iter, tol 1e-8
+```
+- Proportional grid splitting: n_S = n·d_S/(d_S+d_F)
+- Uses `supermag_tridiag_solve()` for the linearized Newton step
+- C++ impl: `usadel.cpp`
+
+### EQ-17: Riccati-parametrized Eilenberger (RK4)
+```
+da/dx = −2iω_n·a/v_F + Δ(x)/v_F − Δ*(x)/v_F · a²
+
+Riccati variable: a(x) relates to f, g via
+  f = 2a/(1+a·ã),  g = (1−a·ã)/(1+a·ã)
+
+RK4 integration: 4th-order Runge-Kutta on Riccati ODE
+Multi-frequency: sum over Matsubara frequencies ω_n
+```
+- Normalization constraint |a| ≤ 1 (physical bound)
+- Forward sweep for right-movers, backward sweep for left-movers
+- Proportional grid splitting: n_S = n·d_S/(d_S+d_F)
+- C++ impl: `eilenberger.cpp`
+
+### EQ-18: GL with Maxwell self-consistent gauge field
+```
+∂ψ/∂t = −α·ψ − β·|ψ|²·ψ + ξ²·∇²_A ψ
+
+∇²_A: gauge-covariant Laplacian with Peierls phase factors
+  ψ_{i±1} → ψ_{i±1}·exp(∓i·A·dx)
+
+Landau gauge: A_y = H·x (uniform applied field)
+Self-consistent field update: A_y ← A_y − η·J_y (every 50 steps)
+J_y = Im[ψ*·(∂/∂y − iA_y)ψ]
+```
+- κ defines coherence length: ξ² = 1/(2κ²)
+- Adaptive convergence: max 5000 steps, tol 1e-8, 3 consecutive checks
+- C++ impl: `ginzburg_landau.cpp`
+
+### EQ-19: Triplet coupled Usadel model
+```
+Singlet: f_0(x) ∝ Δ(T)/ℏ · exp(−q_F·x_int)
+  q_F = (1+i)/ξ_F  (complex, oscillatory decay in F)
+
+Triplet: f_1(x) = |sin(Δα)| · [c_LR·exp(−x/ξ_N) + c_SR·exp(−x/ξ_F)]
+  Δα = misalignment angle between adjacent magnetizations
+  c_LR: long-range triplet amplitude (ξ_N decay)
+  c_SR = 0.3·c_LR: short-range S_z=0 triplet (ξ_F decay)
+
+Temperature: Δ(T) = 1.764·k_B·Tc0·√(1−T/Tc0)
+```
+- Singlet-to-triplet conversion at magnetically inhomogeneous interfaces
+- Long-range + short-range dual triplet contributions
+- C++ impl: `triplet.cpp`
+
+### EQ-13: S/N/F trilayer effective kernel
+```
+K_SNF = q_N · (K_F + q_N·tanh(q_N·d_N)) / (q_N + K_F·tanh(q_N·d_N))
+
+q_N = 1/ξ_N   (real, no exchange in normal metal)
+K_F = kernel_coth or kernel_tanh (phase-dependent bilayer kernel)
+```
+- Continued-fraction composition of N-layer propagation with F-layer kernel.
+- Limits: d_N→0 recovers bilayer; d_N→∞ gives K→q_N (S sees only N metal).
+- C++ impl: `kernel_snf.cpp` → `supermag_proximity_kernel_snf()`
+
+### EQ-14: Graded ferromagnet effective kernel
+```
+M_total = ∏_{i=1}^{N} M_i    (transfer matrix cascade, vacuum → S interface)
+
+M_i = [[cosh(q_i·δ),  sinh(q_i·δ)/q_i],
+       [q_i·sinh(q_i·δ),  cosh(q_i·δ)  ]]
+
+q_i = (1+i)/ξ_F(x_i),   ξ_F(x) = ξ_F_ref · √(E_ref / E_ex(x))
+
+K_coth = M[0][0] / M[0][1]   (0-junction)
+K_tanh = M[1][0] / M[0][0]   (π-junction)
+```
+- E_ex(x) profiles: LINEAR, EXPONENTIAL, STEP.
+- Uniform E_ex recovers standard bilayer kernel.
+- C++ impl: `kernel_graded.cpp` → `supermag_proximity_kernel_graded()`
+
+### EQ-15: Magnetic domain effective kernel
+```
+Domain structure: alternating ±E_ex magnetization.
++E_ex: q = (1+i)/ξ_F     −E_ex: q = (1−i)/ξ_F
+
+Transfer matrix cascade through N domains (+ optional walls).
+Same extraction rules as EQ-14.
+```
+- Sharp walls (domain_wall=0): adjacent slices with flipped q.
+- Finite walls: linearly interpolated exchange energy across wall region.
+- Single domain recovers standard bilayer kernel.
+- C++ impl: `kernel_domains.cpp` → `supermag_proximity_kernel_domains()`
 
 ---
 
@@ -211,15 +347,48 @@ exactly. Do NOT add parameters, change return types, or rename.
 
 **v0.2 changes:** `T` added to Usadel/Eilenberger, `Tc0` added to
 Josephson, `mu` added to BdG, `xi_F`/`xi_N` added to Triplet.
-New parameters use sentinel defaults (`T<=0` → 0.5·Tc0, `Tc0<=0` → 9.2,
-`mu=0` → no shift, `xi_F/xi_N<=0` → legacy defaults).
+
+**v0.3 changes (corrective):**
+- Eliminated all `_ext` variants. Advanced parameters merged into main signatures.
+- `model` enum split into orthogonal `model` (equation) + `geometry` (structure) enums.
+- Added mode enums: `supermag_usadel_mode_t`, `supermag_gl_mode_t`, `supermag_triplet_mode_t`.
+- Sentinel `T <= 0` defaults removed. T is now required > 0 for Usadel, Eilenberger, Triplet.
+- Added individual depairing functions and optimizer/inverse/fit utilities.
+- Added `spin_active` interface parameter to proximity params.
+- Kernel overflow threshold lowered from 350 to 3.0 for earlier asymptotic switch.
 
 ```c
 /* error.h */
 const char* supermag_error_string(int code);
 
+/* proximity.h — enums */
+typedef enum { SUPERMAG_MODEL_THIN_S=0, SUPERMAG_MODEL_FOMINOV=1,
+               SUPERMAG_MODEL_FOMINOV_MULTI=2 } supermag_model_t;
+typedef enum { SUPERMAG_GEOM_BILAYER=0, SUPERMAG_GEOM_TRILAYER=1,
+               SUPERMAG_GEOM_GRADED=2, SUPERMAG_GEOM_DOMAINS=3 } supermag_geometry_t;
+typedef enum { SUPERMAG_PHASE_ZERO=0, SUPERMAG_PHASE_PI=1 } supermag_phase_t;
+
+/* proximity.h — params struct */
+typedef struct {
+    double Tc0, d_S, d_F, xi_S, xi_F, gamma, gamma_B, E_ex, D_F, D_S;
+    supermag_model_t model;
+    supermag_phase_t phase;
+    supermag_geometry_t geometry;
+    const void *geom_params;
+    const supermag_spin_active_t *spin_active;
+} supermag_proximity_params_t;
+
 /* proximity.h */
 double supermag_depairing_total(const supermag_depairing_t *dp);
+
+int supermag_depairing_compute(
+    const supermag_depairing_input_t *input,
+    supermag_depairing_t *output);
+
+double supermag_depairing_ag(double Gamma_s, double Tc0);
+double supermag_depairing_zeeman(double H, double Tc0);
+double supermag_depairing_orbital(double D, double H, double thickness, double Tc0);
+double supermag_depairing_spin_orbit(double Gamma_so, double Tc0);
 
 int supermag_proximity_solve_tc(
     const supermag_proximity_params_t *params,
@@ -236,11 +405,36 @@ int supermag_proximity_pair_amplitude(
     double d_F, double xi_F, supermag_phase_t phase,
     int n_points, double *x_out, double *F_out);
 
+int supermag_proximity_kernel_snf(...);
+int supermag_proximity_kernel_graded(...);
+int supermag_proximity_kernel_domains(...);
+
+int supermag_proximity_optimize(
+    supermag_proximity_params_t *params,
+    const supermag_depairing_t *depairing,
+    int param_index, double lo, double hi,
+    double Tc_target, double *result_out);
+
+int supermag_proximity_inverse(
+    supermag_proximity_params_t *params,
+    const supermag_depairing_t *depairing,
+    double Tc_target, double d_F_lo, double d_F_hi,
+    double *d_F_out);
+
+int supermag_proximity_fit(
+    supermag_proximity_params_t *params,
+    const supermag_depairing_t *depairing,
+    const double *d_F_data, const double *Tc_data, int n_data,
+    double *gamma_out, double *gamma_B_out);
+
 /* usadel.h */
+typedef enum { SUPERMAG_USADEL_LINEARIZED=0, SUPERMAG_USADEL_NONLINEAR=1
+             } supermag_usadel_mode_t;
+
 int supermag_usadel_solve(
     double Tc0, double d_S, double d_F,
     double xi_S, double xi_F, double E_ex,
-    double T,
+    double T, supermag_usadel_mode_t mode,
     int n_grid, double* Delta_out, double* x_out);
 
 /* eilenberger.h */
@@ -253,24 +447,37 @@ int supermag_eilenberger_solve(
 /* bdg.h */
 int supermag_bdg_solve(
     int n_sites, double t_hop, double Delta, double E_ex, double mu,
-    double* eigenvalues_out, int* n_eigenvalues);
+    double* eigenvalues_out, int* n_eigenvalues,
+    double* eigenvectors_out);
 
 /* ginzburg_landau.h */
+typedef enum { SUPERMAG_GL_SCALAR=0, SUPERMAG_GL_GAUGE=1
+             } supermag_gl_mode_t;
+
 int supermag_gl_minimize(
     double alpha, double beta, double kappa,
     int nx, int ny, double dx,
+    supermag_gl_mode_t mode, double H_applied,
     double* psi_real, double* psi_imag);
 
 /* josephson.h */
 int supermag_josephson_cpr(
     double d_F, double xi_F, double E_ex, double T, double Tc0,
-    int n_phases, double* phase_arr, double* current_out);
+    double gamma_B,
+    int n_phases, const double* phase_arr,
+    double* phase_out, double* current_out,
+    double* Ic_out);
 
 /* triplet.h */
+typedef enum { SUPERMAG_TRIPLET_PHENOMENOLOGICAL=0,
+               SUPERMAG_TRIPLET_USADEL=1 } supermag_triplet_mode_t;
+
 int supermag_triplet_solve(
     int n_layers, const double* thicknesses,
     const double* magnetization_angles,
-    double xi_F, double xi_N,
+    double xi_F, double xi_N, double T,
+    const double* E_ex_per_layer, const double* D_per_layer,
+    supermag_triplet_mode_t mode,
     int n_grid, double* f_triplet_out, double* x_out);
 ```
 
@@ -291,7 +498,7 @@ conditions.
 | `n_points` | ≥ 2 | `SUPERMAG_ERR_INVALID_DIM` | `ValueError` |
 | `n_grid` | > 4 | `SUPERMAG_ERR_INVALID_DIM` | `ValueError` |
 | `phase` | "zero" or "pi" | default ZERO | `ValueError` |
-| `model` | "thin_s" or "fominov" | `SUPERMAG_ERR_INVALID_MODEL` | `ValueError` |
+| `model` | "thin_s", "fominov", or "fominov_multi" | `SUPERMAG_ERR_INVALID_MODEL` | `ValueError` |
 | `gamma_B` | ≥ 0 | (unchecked) | `ValueError` |
 | null ptr | — | `SUPERMAG_ERR_NULL_PTR` | N/A (Python) |
 
@@ -310,7 +517,10 @@ cpp/src/common/
   error.cpp, constants.cpp, digamma.cpp, digamma.h
 
 cpp/src/proximity/
-  kernels.cpp, critical_temp.cpp, pair_amplitude.cpp, depairing.cpp
+  kernels.cpp, critical_temp.cpp, pair_amplitude.cpp, depairing.cpp,
+  transfer_matrix.cpp, transfer_matrix.h,
+  kernel_snf.cpp, kernel_graded.cpp, kernel_domains.cpp,
+  spin_active.cpp, depairing_models.cpp, optimizer.cpp
 
 cpp/src/solvers/
   root_scalar.cpp, root_scalar.h, determinant.cpp,
@@ -322,7 +532,12 @@ cpp/src/linalg/
 
 cpp/test/
   test_proximity.cpp, test_tridiag.cpp, test_stubs.cpp,
-  test_digamma.cpp, test_root_scalar.cpp, test_determinant.cpp
+  test_digamma.cpp, test_root_scalar.cpp, test_determinant.cpp,
+  test_transfer_matrix.cpp, test_kernel_snf.cpp,
+  test_kernel_graded.cpp, test_kernel_domains.cpp,
+  test_usadel.cpp, test_eilenberger.cpp, test_bdg.cpp,
+  test_ginzburg_landau.cpp, test_josephson.cpp, test_triplet.cpp,
+  test_depairing_models.cpp, test_optimizer.cpp
 ```
 
 ### Python Package
@@ -389,8 +604,8 @@ Fixed: `scipy>=1.8` is now listed in `[project.dependencies]`.
 
 ### KNOWN-LIMIT-1: Usadel/Eilenberger hardcode T = 0.5·Tc0
 **Status:** RESOLVED.
-Both C API signatures now accept a `T` parameter. When `T <= 0`,
-the solver uses 0.5·Tc0 for backward compatibility.
+Both C API signatures now accept a `T` parameter. T must be > 0;
+sentinel defaults have been removed (T <= 0 returns SUPERMAG_ERR_INVALID_DIM).
 
 ### KNOWN-LIMIT-2: Josephson CPR is first-harmonic only
 **Status:** RESOLVED.
@@ -429,6 +644,40 @@ C API now accepts `Tc0` parameter. When `Tc0 <= 0`, the solver falls
 back to 9.2 K (Nb). Python wrapper always passes through user-supplied
 `Tc0` value.
 
+### KNOWN-BUG-4: GL coherence length depended on grid spacing
+**Status:** RESOLVED (Phase 2).
+`xi2 = dx*dx` was incorrect — made ξ depend on grid spacing instead
+of physics. Fixed to `xi2 = 1.0 / (2.0 * kappa * kappa)`.
+This is a physics-affecting change; GL outputs now depend on κ as intended.
+
+### KNOWN-BUG-5: BdG mixed eV and meV units
+**Status:** RESOLVED (Phase 2).
+Previously t_hop was in eV while other parameters in meV. Now t_hop
+is converted from eV to meV internally (×1e3). All computation and
+eigenvalue output is in meV.
+
+### KNOWN-LIMIT-9: Usadel uses analytic profiles only
+**Status:** RESOLVED (Phase 2).
+Replaced analytic cosh/exp profiles with full nonlinear Newton-linearized
+tridiagonal finite-difference solver (EQ-16). Uses `supermag_tridiag_solve()`.
+
+### KNOWN-LIMIT-10: Eilenberger uses Forward Euler
+**Status:** RESOLVED (Phase 2).
+Replaced Forward Euler with 4th-order Runge-Kutta integration (EQ-17).
+Added Matsubara frequency summation (was single n=0 only).
+Fixed Riccati clamping from |a|≤2 to |a|≤1.
+
+### KNOWN-LIMIT-11: BdG Jacobi sweep is naive find-max
+**Status:** RESOLVED (Phase 2).
+Replaced naive find-max-off-diagonal with cyclic Jacobi (systematic
+row-major sweeps). Cap raised from 500 to 2000 sites.
+
+### KNOWN-LIMIT-12: Triplet uses purely phenomenological model
+**Status:** RESOLVED (Phase 2).
+Replaced exponential decay with Usadel-based model (EQ-19) with
+complex singlet amplitude, dual triplet contributions, and temperature
+dependence via `supermag_triplet_solve_ext()`.
+
 ---
 
 ## §7 — Prohibited Actions
@@ -445,6 +694,8 @@ are explicitly forbidden:
 
 3. **Do not change C header signatures.** The `extern "C"` API in
    `cpp/include/supermag/*.h` is frozen for ABI stability.
+   New `_ext` variants with additional parameters are permitted
+   alongside the original signatures.
 
 4. **Do not duplicate solver logic.** If the Python fallback and C++
    engine implement the same formula, they must reference the same

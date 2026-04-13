@@ -46,7 +46,7 @@ let parse_range s =
 
 (* ── Build params from SC + FM lookup ────────────────── *)
 
-let build_params sc_name fm_name model_str phase_str gamma gamma_b d_s_opt =
+let build_params sc_name fm_name model_str phase_str gamma gamma_b d_s_opt geom_str =
   match Material.get_superconductor sc_name with
   | None -> Error (Printf.sprintf "unknown superconductor: %s" sc_name)
   | Some sc ->
@@ -59,27 +59,31 @@ let build_params sc_name fm_name model_str phase_str gamma gamma_b d_s_opt =
         match Params.phase_of_string phase_str with
         | Error e -> Error e
         | Ok phase ->
-          let d_s = match d_s_opt with
-            | Some v -> v
-            | None -> sc.xi_s  (* default: d_S = xi_S when not specified *)
-          in
-          Ok Params.{
-            tc0 = sc.tc; d_s; xi_s = sc.xi_s; xi_f = fm.xi_f;
-            gamma; gamma_b; e_ex = fm.e_ex; d_f_coeff = fm.d_f;
-            model; phase;
-          }
+          match Params.geometry_of_string geom_str with
+          | Error e -> Error e
+          | Ok geometry ->
+            let d_s = match d_s_opt with
+              | Some v -> v
+              | None -> sc.xi_s
+            in
+            Ok Params.{
+              tc0 = sc.tc; d_s; d_s_coeff = 1.0; xi_s = sc.xi_s; xi_f = fm.xi_f;
+              gamma; gamma_b; e_ex = fm.e_ex; d_f_coeff = fm.d_f;
+              model; phase; geometry;
+              geom_config = None; spin_active = None;
+            }
 
 (* ── Main sweep command ──────────────────────────────── *)
 
 let run_sweep param_str range_str sc fm model phase
-    gamma gamma_b format_str output_file d_f_range_str d_s_opt =
+    gamma gamma_b format_str output_file d_f_range_str d_s_opt geom_str =
   match Sweep.sweep_param_of_string param_str with
   | Error msg -> Printf.eprintf "Error: %s\n" msg; 1
   | Ok param ->
     match parse_range range_str with
     | Error (`Msg msg) -> Printf.eprintf "Error: %s\n" msg; 1
     | Ok (lo, hi, n) ->
-      match build_params sc fm model phase gamma gamma_b d_s_opt with
+      match build_params sc fm model phase gamma gamma_b d_s_opt geom_str with
       | Error msg -> Printf.eprintf "Error: %s\n" msg; 1
       | Ok params ->
         let sweep_values = Sweep.grid_sweep Sweep.{
@@ -118,7 +122,7 @@ let run_sweep param_str range_str sc fm model phase
 (* ── Cmdliner terms ──────────────────────────────────── *)
 
 let param_t =
-  let doc = "Parameter to sweep: d_F, d_S, gamma, gamma_B, E_ex, xi_F, Tc0" in
+  let doc = "Parameter to sweep: d_F, d_S, D_S, gamma, gamma_B, E_ex, xi_F, Tc0" in
   Arg.(required & opt (some string) None & info ["param"; "p"] ~doc ~docv:"PARAM")
 
 let range_t =
@@ -134,7 +138,7 @@ let fm_t =
   Arg.(value & opt string "Fe" & info ["fm"] ~doc ~docv:"FM")
 
 let model_t =
-  let doc = "Model: thin_s or fominov" in
+  let doc = "Model: thin_s, fominov, or fominov_multi" in
   Arg.(value & opt string "thin_s" & info ["model"] ~doc ~docv:"MODEL")
 
 let phase_t =
@@ -165,11 +169,16 @@ let d_s_t =
   let doc = "Superconductor layer thickness d_S (nm). Defaults to xi_S if omitted." in
   Arg.(value & opt (some float) None & info ["d-s"] ~doc ~docv:"D_S")
 
+let geometry_t =
+  let doc = "Geometry: bilayer, trilayer, graded, or domains" in
+  Arg.(value & opt string "bilayer" & info ["geometry"] ~doc ~docv:"GEOM")
+
 let sweep_cmd =
   let doc = "SUPERMag parameter sweep driver" in
   let info = Cmd.info "supermag-sweep" ~doc in
   Cmd.v info
     Term.(const run_sweep $ param_t $ range_t $ sc_t $ fm_t $ model_t $ phase_t
-          $ gamma_t $ gamma_b_t $ format_t $ output_t $ d_f_range_t $ d_s_t)
+          $ gamma_t $ gamma_b_t $ format_t $ output_t $ d_f_range_t $ d_s_t
+          $ geometry_t)
 
 let () = exit (Cmd.eval sweep_cmd)
