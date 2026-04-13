@@ -8,7 +8,7 @@ on:
 
 jobs:
   build-and-test:
-    runs-on: windows-latest
+    runs-on: ubuntu-latest
     strategy:
       matrix:
         python-version: ["3.11"]
@@ -21,60 +21,29 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
-      - name: Set up MSVC
-        uses: ilammy/msvc-dev-cmd@v1
-        with:
-          arch: x64
-
-      - name: Build C++ library
-        shell: cmd
-        run: |
-          mkdir build\obj\src\common
-          mkdir build\obj\src\proximity
-          mkdir build\obj\src\linalg
-          mkdir build\obj\src\solvers
-          mkdir build\test
-          cl /std:c++17 /O2 /arch:AVX2 /EHsc /W4 /I cpp/include /I cpp/src /c /Fobuild\obj\src\common\error.obj cpp\src\common\error.cpp
-          cl /std:c++17 /O2 /arch:AVX2 /EHsc /W4 /I cpp/include /I cpp/src /c /Fobuild\obj\src\common\constants.obj cpp\src\common\constants.cpp
-          cl /std:c++17 /O2 /arch:AVX2 /EHsc /W4 /I cpp/include /I cpp/src /c /Fobuild\obj\src\common\digamma.obj cpp\src\common\digamma.cpp
-          cl /std:c++17 /O2 /arch:AVX2 /EHsc /W4 /I cpp/include /I cpp/src /c /Fobuild\obj\src\common\allocator.obj cpp\src\common\allocator.cpp
-          cl /std:c++17 /O2 /arch:AVX2 /EHsc /W4 /I cpp/include /I cpp/src /c /Fobuild\obj\src\proximity\pair_amplitude.obj cpp\src\proximity\pair_amplitude.cpp
-          cl /std:c++17 /O2 /arch:AVX2 /EHsc /W4 /I cpp/include /I cpp/src /c /Fobuild\obj\src\proximity\critical_temp.obj cpp\src\proximity\critical_temp.cpp
-          cl /std:c++17 /O2 /arch:AVX2 /EHsc /W4 /I cpp/include /I cpp/src /c /Fobuild\obj\src\proximity\kernels.obj cpp\src\proximity\kernels.cpp
-          cl /std:c++17 /O2 /arch:AVX2 /EHsc /W4 /I cpp/include /I cpp/src /c /Fobuild\obj\src\proximity\depairing.obj cpp\src\proximity\depairing.cpp
-          cl /std:c++17 /O2 /arch:AVX2 /EHsc /W4 /I cpp/include /I cpp/src /c /Fobuild\obj\src\linalg\tridiag.obj cpp\src\linalg\tridiag.cpp
-          cl /std:c++17 /O2 /arch:AVX2 /EHsc /W4 /I cpp/include /I cpp/src /c /Fobuild\obj\src\linalg\simd_kernels.obj cpp\src\linalg\simd_kernels.cpp
-          cl /std:c++17 /O2 /arch:AVX2 /EHsc /W4 /I cpp/include /I cpp/src /c /Fobuild\obj\src\linalg\eigen.obj cpp\src\linalg\eigen.cpp
-          cl /std:c++17 /O2 /arch:AVX2 /EHsc /W4 /I cpp/include /I cpp/src /c /Fobuild\obj\src\solvers\usadel.obj cpp\src\solvers\usadel.cpp
-          cl /std:c++17 /O2 /arch:AVX2 /EHsc /W4 /I cpp/include /I cpp/src /c /Fobuild\obj\src\solvers\eilenberger.obj cpp\src\solvers\eilenberger.cpp
-          cl /std:c++17 /O2 /arch:AVX2 /EHsc /W4 /I cpp/include /I cpp/src /c /Fobuild\obj\src\solvers\bdg.obj cpp\src\solvers\bdg.cpp
-          cl /std:c++17 /O2 /arch:AVX2 /EHsc /W4 /I cpp/include /I cpp/src /c /Fobuild\obj\src\solvers\ginzburg_landau.obj cpp\src\solvers\ginzburg_landau.cpp
-          cl /std:c++17 /O2 /arch:AVX2 /EHsc /W4 /I cpp/include /I cpp/src /c /Fobuild\obj\src\solvers\josephson.obj cpp\src\solvers\josephson.cpp
-          cl /std:c++17 /O2 /arch:AVX2 /EHsc /W4 /I cpp/include /I cpp/src /c /Fobuild\obj\src\solvers\triplet.obj cpp\src\solvers\triplet.cpp
-          cl /std:c++17 /O2 /arch:AVX2 /EHsc /W4 /I cpp/include /I cpp/src /c /Fobuild\obj\src\solvers\root_scalar.obj cpp\src\solvers\root_scalar.cpp
-          cl /std:c++17 /O2 /arch:AVX2 /EHsc /W4 /I cpp/include /I cpp/src /c /Fobuild\obj\src\solvers\determinant.obj cpp\src\solvers\determinant.cpp
-          lib /OUT:build\supermag.lib build\obj\src\common\error.obj build\obj\src\common\constants.obj build\obj\src\common\digamma.obj build\obj\src\common\allocator.obj build\obj\src\proximity\pair_amplitude.obj build\obj\src\proximity\critical_temp.obj build\obj\src\proximity\kernels.obj build\obj\src\proximity\depairing.obj build\obj\src\linalg\tridiag.obj build\obj\src\linalg\simd_kernels.obj build\obj\src\linalg\eigen.obj build\obj\src\solvers\usadel.obj build\obj\src\solvers\eilenberger.obj build\obj\src\solvers\bdg.obj build\obj\src\solvers\ginzburg_landau.obj build\obj\src\solvers\josephson.obj build\obj\src\solvers\triplet.obj build\obj\src\solvers\root_scalar.obj build\obj\src\solvers\determinant.obj
-
-      - name: Run C++ tests
-        shell: cmd
-        run: |
-          cl /std:c++17 /O2 /arch:AVX2 /EHsc /W4 /I cpp/include /I cpp/src /Febuild\test\test_proximity.exe cpp\test\test_proximity.cpp build\supermag.lib
-          cl /std:c++17 /O2 /arch:AVX2 /EHsc /W4 /I cpp/include /I cpp/src /Febuild\test\test_tridiag.exe cpp\test\test_tridiag.cpp build\supermag.lib
-          cl /std:c++17 /O2 /arch:AVX2 /EHsc /W4 /I cpp/include /I cpp/src /Febuild\test\test_stubs.exe cpp\test\test_stubs.cpp build\supermag.lib
-          cl /std:c++17 /O2 /arch:AVX2 /EHsc /W4 /I cpp/include /I cpp/src /Febuild\test\test_digamma.exe cpp\test\test_digamma.cpp build\supermag.lib
-          cl /std:c++17 /O2 /arch:AVX2 /EHsc /W4 /I cpp/include /I cpp/src /Febuild\test\test_root_scalar.exe cpp\test\test_root_scalar.cpp build\supermag.lib
-          cl /std:c++17 /O2 /arch:AVX2 /EHsc /W4 /I cpp/include /I cpp/src /Febuild\test\test_determinant.exe cpp\test\test_determinant.cpp build\supermag.lib
-          build\test\test_proximity.exe
-          build\test\test_tridiag.exe
-          build\test\test_stubs.exe
-          build\test\test_digamma.exe
-          build\test\test_root_scalar.exe
-          build\test\test_determinant.exe
-
-      - name: Install Python dependencies
+      - name: Install build tools
         run: |
           python -m pip install --upgrade pip
-          pip install numpy matplotlib pytest scipy cycler
+          pip install scikit-build-core pybind11 cmake numpy matplotlib pytest scipy
+
+      - name: Build C++ via CMake
+        run: |
+          cmake -B build -S python -DCMAKE_BUILD_TYPE=Release
+          cmake --build build
+
+      - name: Run C++ tests
+        run: |
+          mkdir -p build/test
+          for src in cpp/test/test_*.cpp; do
+            name=$(basename $src .cpp)
+            g++ -std=c++17 -O2 -I cpp/include -I cpp/src -o build/test/$name $src -Lbuild -lsupermag_core -lm
+            echo "--- $name ---"
+            build/test/$name
+          done
+          echo "All C++ tests passed."
+
+      - name: Install Python package
+        run: pip install ./python
 
       - name: Run pytest
         run: python -m pytest python/tests/ -v

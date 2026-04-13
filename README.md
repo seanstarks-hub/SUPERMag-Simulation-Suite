@@ -12,20 +12,9 @@
 
 ## Installation
 
-### From source (with native C++ extension)
+### Pure-Python (all platforms)
 
-Requires a C++ compiler and CMake:
-
-```bash
-git clone https://github.com/seanstarks-hub/SUPERMag-Simulation-Suite.git
-cd SUPERMag-Simulation-Suite
-make shared          # build libsupermag
-pip install ./python # build native extension + install
-```
-
-### Pure-Python fallback
-
-All solvers include pure-Python fallbacks that work without the C++ extension:
+All solvers include pure-Python fallbacks. No compiler needed:
 
 ```bash
 pip install ./python
@@ -34,6 +23,48 @@ pip install ./python
 ```python
 import supermag
 ```
+
+This is the recommended path for most users. It works on Windows, Linux, and macOS (including Apple Silicon) with Python ≥ 3.9.
+
+### With native C++ acceleration
+
+Native C++ dispatch gives 10–100× speedups on numerically intensive solvers.
+Building the extension requires a C++17 compiler and CMake ≥ 3.15. The build is
+handled automatically by `pip install` — no separate `make build` step is needed.
+
+#### Windows (first-class, CI-tested)
+
+1. Install [Visual Studio 2022 Build Tools](https://visualstudio.microsoft.com/downloads/#build-tools-for-visual-studio-2022) with the **"Desktop development with C++"** workload.
+2. Open a **Developer Command Prompt** (or load `vcvars64.bat`).
+3. Run:
+   ```bash
+   pip install ./python
+   ```
+
+CMake is bundled with Visual Studio. If you need a standalone copy: `pip install cmake`.
+
+#### Linux x86_64 (supported, CI-tested)
+
+```bash
+# Ubuntu / Debian
+sudo apt install g++ cmake
+
+# Fedora
+sudo dnf install gcc-c++ cmake
+
+pip install ./python
+```
+
+AVX2 is used automatically when the CPU supports it; the build succeeds without
+it on older hardware.
+
+### Platform support matrix
+
+| | Windows x86_64 | Linux x86_64 | macOS |
+|---|---|---|---|
+| **Pure-Python** | ✅ | ✅ | ✅ |
+| **Native C++** | ✅ CI-tested | ✅ CI-tested | ❌ Not yet supported |
+| **Pre-built wheels** | ✅ | ✅ | Roadmap |
 
 ## Examples
 
@@ -117,7 +148,7 @@ MATERIALS["MgB2"] = {
 mgb2 = supermag.get_material("MgB2")
 ```
 
-### Plotting themes
+### [WIP] Plotting themes
 
 Switch between publication, presentation, draft, and dark themes:
 
@@ -132,7 +163,7 @@ with supermag.theme_context("presentation"):
     plot_tc_vs_df(d_F, Tc, Tc0=nb["Tc"])
 ```
 
-Run `supermag.list_themes()` to see all available presets.
+Run `supermag.list_themes()` to see all available [WIP] presets.
 
 ## Available Materials
 
@@ -175,8 +206,9 @@ All solver modules have C++ implementations with pybind11 native dispatch and pu
 
 ### Roadmap
 
-- Pre-built wheels via cibuildwheel CI
-- macOS CI support
+- macOS native C++ support and CI
+- Pre-built wheels for macOS (Intel + Apple Silicon)
+- GUI capabilities for least effort useage.
 
 ## Contributing
 
