@@ -20,6 +20,39 @@ let test_depairing_total () =
   Alcotest.(check bool) "sum ~ 0.38"
     true (Float.abs (total -. 0.38) < eps)
 
+let test_depairing_ag () =
+  let v = Supermag_ffi.Stubs.depairing_ag ~gamma_s_mev:1.0 ~t_kelvin:9.2 in
+  Alcotest.(check bool) "AG > 0" true (v > 0.0);
+  let expected = 1.0 /. (2.0 *. 0.0862 *. 9.2) in
+  Alcotest.(check bool) "AG ~ expected"
+    true (Float.abs (v -. expected) /. expected < 0.1)
+
+let test_depairing_zeeman () =
+  let v = Supermag_ffi.Stubs.depairing_zeeman ~h_tesla:1.0 ~t_kelvin:9.2 in
+  Alcotest.(check bool) "Zeeman > 0" true (v > 0.0)
+
+let test_depairing_soc () =
+  let v = Supermag_ffi.Stubs.depairing_soc ~gamma_so_mev:0.5 ~t_kelvin:9.2 in
+  Alcotest.(check bool) "SOC > 0" true (v > 0.0)
+
+let test_depairing_from_physical () =
+  let (ag, zeeman, orbital, soc) =
+    Supermag_ffi.Stubs.depairing_from_physical
+      ~gamma_s_mev:1.0 ~h_tesla:0.5 ~d_nm2ps:18.0
+      ~thickness_nm:50.0 ~gamma_so_mev:0.3 ~t_kelvin:9.0 in
+  Alcotest.(check bool) "ag > 0" true (ag > 0.0);
+  Alcotest.(check bool) "zeeman >= 0" true (zeeman >= 0.0);
+  Alcotest.(check bool) "orbital >= 0" true (orbital >= 0.0);
+  Alcotest.(check bool) "soc > 0" true (soc > 0.0)
+
+let test_depairing_zero_field () =
+  let (_, zeeman, orbital, _) =
+    Supermag_ffi.Stubs.depairing_from_physical
+      ~gamma_s_mev:0.0 ~h_tesla:0.0 ~d_nm2ps:18.0
+      ~thickness_nm:50.0 ~gamma_so_mev:0.0 ~t_kelvin:9.0 in
+  Alcotest.(check bool) "zeeman = 0 at H=0" true (Float.abs zeeman < 1e-15);
+  Alcotest.(check bool) "orbital = 0 at H=0" true (Float.abs orbital < 1e-15)
+
 let test_pair_amplitude_zero () =
   let (x_arr, f_arr) = Supermag_ffi.Stubs.pair_amplitude
       ~d_f:5.0 ~xi_f:1.0 ~phase:0 ~n_points:100 in
@@ -105,7 +138,12 @@ let () =
       Alcotest.test_case "kB"   `Quick test_kB;
     ];
     "depairing", [
-      Alcotest.test_case "total" `Quick test_depairing_total;
+      Alcotest.test_case "total"         `Quick test_depairing_total;
+      Alcotest.test_case "AG channel"    `Quick test_depairing_ag;
+      Alcotest.test_case "Zeeman channel" `Quick test_depairing_zeeman;
+      Alcotest.test_case "SOC channel"   `Quick test_depairing_soc;
+      Alcotest.test_case "from_physical" `Quick test_depairing_from_physical;
+      Alcotest.test_case "zero field"    `Quick test_depairing_zero_field;
     ];
     "proximity", [
       Alcotest.test_case "pair_amplitude zero" `Quick test_pair_amplitude_zero;

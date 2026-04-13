@@ -73,10 +73,30 @@ let build_params sc_name fm_name model_str phase_str gamma gamma_b d_s_opt geom_
               geom_config = None; spin_active = None;
             }
 
+(* ── Parse --depairing gamma_s,H,D,thickness,gamma_so,T ── *)
+
+let parse_depairing s =
+  if s = "" then Ok Params.no_depairing
+  else
+    match String.split_on_char ',' s with
+    | [gs; h; d; th; gso; t] ->
+      (try
+        let gs = Float.of_string gs and h = Float.of_string h
+        and d = Float.of_string d and th = Float.of_string th
+        and gso = Float.of_string gso and t = Float.of_string t in
+        let (ag, zeeman, orbital, spin_orbit) =
+          Supermag_ffi.Stubs.depairing_from_physical
+            ~gamma_s_mev:gs ~h_tesla:h ~d_nm2ps:d
+            ~thickness_nm:th ~gamma_so_mev:gso ~t_kelvin:t in
+        Ok Params.{ ag; zeeman; orbital; spin_orbit }
+      with _ -> Error (`Msg (Printf.sprintf "bad --depairing format: %s" s)))
+    | _ -> Error (`Msg (Printf.sprintf "--depairing must be 6 comma-separated values: %s" s))
+
 (* ── Main sweep command ──────────────────────────────── *)
 
 let run_sweep param_str range_str sc fm model phase
-    gamma gamma_b format_str output_file d_f_range_str d_s_opt geom_str =
+    gamma gamma_b format_str output_file d_f_range_str d_s_opt geom_str
+    depairing_str =
   match Sweep.sweep_param_of_string param_str with
   | Error msg -> Printf.eprintf "Error: %s\n" msg; 1
   | Ok param ->
@@ -86,6 +106,9 @@ let run_sweep param_str range_str sc fm model phase
       match build_params sc fm model phase gamma gamma_b d_s_opt geom_str with
       | Error msg -> Printf.eprintf "Error: %s\n" msg; 1
       | Ok params ->
+        match parse_depairing depairing_str with
+        | Error (`Msg msg) -> Printf.eprintf "Error: %s\n" msg; 1
+        | Ok depairing ->
         let sweep_values = Sweep.grid_sweep Sweep.{
           param_name = param_str; min_val = lo; max_val = hi;
           n_points = n; sweep_type = Grid;
@@ -102,7 +125,7 @@ let run_sweep param_str range_str sc fm model phase
             | Error _ -> [|1.0|]
         in
         match Sweep.tc_parameter_sweep param sweep_values
-            ~params ~d_f_array () with
+            ~params ~d_f_array ~depairing () with
         | Error msg -> Printf.eprintf "Solver error: %s\n" msg; 1
         | Ok result ->
           let oc = match output_file with
@@ -173,12 +196,17 @@ let geometry_t =
   let doc = "Geometry: bilayer, trilayer, graded, or domains" in
   Arg.(value & opt string "bilayer" & info ["geometry"] ~doc ~docv:"GEOM")
 
+let depairing_t =
+  let doc = "Physical depairing inputs: gamma_s_meV,H_tesla,D_nm2ps,thickness_nm,Gamma_so_meV,T_K. \
+             If omitted, no depairing is applied." in
+  Arg.(value & opt string "" & info ["depairing"] ~doc ~docv:"DEPAIRING")
+
 let sweep_cmd =
   let doc = "SUPERMag parameter sweep driver" in
   let info = Cmd.info "supermag-sweep" ~doc in
   Cmd.v info
     Term.(const run_sweep $ param_t $ range_t $ sc_t $ fm_t $ model_t $ phase_t
           $ gamma_t $ gamma_b_t $ format_t $ output_t $ d_f_range_t $ d_s_t
-          $ geometry_t)
+          $ geometry_t $ depairing_t)
 
 let () = exit (Cmd.eval sweep_cmd)

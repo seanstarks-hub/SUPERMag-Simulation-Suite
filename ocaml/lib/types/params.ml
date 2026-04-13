@@ -105,3 +105,26 @@ and geom_config =
   | Trilayer_config of trilayer_params
   | Graded_config of graded_params
   | Domain_config of domain_params
+
+(** Fit flags: which parameters to include in least-squares fitting *)
+type fit_flags = {
+  fit_gamma : bool;
+  fit_gamma_b : bool;
+  fit_e_ex : bool;
+  fit_xi_f : bool;
+}
+
+let default_fit_flags = {
+  fit_gamma = true; fit_gamma_b = false;
+  fit_e_ex = false; fit_xi_f = false;
+}
+
+(** Physical inputs for depairing computation *)
+type depairing_input = {
+  gamma_s_mev : float;   (** Spin-flip scattering rate (meV) *)
+  h_tesla : float;       (** Applied magnetic field (T) *)
+  d_nm2ps : float;       (** Diffusion coefficient (nm^2/ps) *)
+  thickness_nm : float;  (** Film thickness (nm) *)
+  gamma_so_mev : float;  (** Spin-orbit scattering rate (meV) *)
+  t_kelvin : float;      (** Temperature (K) *)
+}

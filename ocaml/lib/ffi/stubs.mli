@@ -86,3 +86,56 @@ val triplet_solve :
   ?xi_f:float -> ?xi_n:float ->
   t:float -> mode:int ->
   n_grid:int -> float array * float array
+
+(** Individual depairing channel: Abrikosov-Gor'kov *)
+val depairing_ag : gamma_s_mev:float -> t_kelvin:float -> float
+
+(** Individual depairing channel: Zeeman *)
+val depairing_zeeman : h_tesla:float -> t_kelvin:float -> float
+
+(** Individual depairing channel: orbital (perpendicular field) *)
+val depairing_orbital_perp :
+  d_nm2ps:float -> h_tesla:float -> thickness_nm:float -> t_kelvin:float -> float
+
+(** Individual depairing channel: orbital (parallel field) *)
+val depairing_orbital_par :
+  d_nm2ps:float -> h_tesla:float -> thickness_nm:float -> t_kelvin:float -> float
+
+(** Individual depairing channel: spin-orbit coupling *)
+val depairing_soc : gamma_so_mev:float -> t_kelvin:float -> float
+
+(** Compute all depairing channels from physical inputs.
+    Returns (ag, zeeman, orbital, spin_orbit) tuple. *)
+val depairing_from_physical :
+  gamma_s_mev:float -> h_tesla:float -> d_nm2ps:float ->
+  thickness_nm:float -> gamma_so_mev:float -> t_kelvin:float ->
+  float * float * float * float
+
+(** Golden-section optimize d_F to match target Tc.
+    Returns optimal d_F (nm). *)
+val optimize_tc :
+  tc0:float -> d_s:float -> xi_s:float -> xi_f:float ->
+  gamma:float -> gamma_b:float -> e_ex:float -> d_f_coeff:float ->
+  d_s_coeff:float -> model:int -> phase:int -> geometry:int ->
+  depairing:(float * float * float * float) ->
+  d_f_lo:float -> d_f_hi:float -> tc_target:float -> float
+
+(** Inverse solve: find d_F that gives target Tc via Brent's method.
+    Returns d_F (nm). *)
+val inverse_tc :
+  tc0:float -> d_s:float -> xi_s:float -> xi_f:float ->
+  gamma:float -> gamma_b:float -> e_ex:float -> d_f_coeff:float ->
+  d_s_coeff:float -> model:int -> phase:int -> geometry:int ->
+  depairing:(float * float * float * float) ->
+  tc_target:float -> d_f_lo:float -> d_f_hi:float -> float
+
+(** Nelder-Mead least-squares fit.
+    Returns (chi2, fitted_gamma, fitted_gamma_B, fitted_E_ex, fitted_xi_F). *)
+val fit_tc :
+  tc0:float -> d_s:float -> xi_s:float -> xi_f:float ->
+  gamma:float -> gamma_b:float -> e_ex:float -> d_f_coeff:float ->
+  d_s_coeff:float -> model:int -> phase:int -> geometry:int ->
+  depairing:(float * float * float * float) ->
+  d_f_data:float array -> tc_data:float array ->
+  fit_gamma:bool -> fit_gamma_b:bool -> fit_e_ex:bool -> fit_xi_f:bool ->
+  float * float * float * float * float

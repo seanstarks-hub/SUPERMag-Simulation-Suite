@@ -3,8 +3,9 @@
     Uses OCaml ctypes to call into the compiled C++ library.
     The C headers define the FFI boundary — only C types cross it.
 
-    Binds all 10 C API functions:
-      constants (2), proximity (4), solvers (6). *)
+    Binds all 18 C API functions:
+      constants (2), proximity (4), solvers (6),
+      depairing channels (6), optimizer (3). *)
 
 open Ctypes
 open Foreign
@@ -112,6 +113,52 @@ let c_triplet_solve =
     (int @-> ptr double @-> ptr double @-> ptr double @-> ptr double
      @-> double @-> double @-> double @-> int
      @-> int @-> ptr double @-> ptr double @-> returning int)
+
+(* ── Depairing individual channel bindings ────────────── *)
+
+let c_depairing_ag =
+  foreign "supermag_depairing_ag"
+    (double @-> double @-> returning double)
+
+let c_depairing_zeeman =
+  foreign "supermag_depairing_zeeman"
+    (double @-> double @-> returning double)
+
+let c_depairing_orbital_perp =
+  foreign "supermag_depairing_orbital_perp"
+    (double @-> double @-> double @-> double @-> returning double)
+
+let c_depairing_orbital_par =
+  foreign "supermag_depairing_orbital_par"
+    (double @-> double @-> double @-> double @-> returning double)
+
+let c_depairing_soc =
+  foreign "supermag_depairing_soc"
+    (double @-> double @-> returning double)
+
+let c_depairing_from_physical =
+  foreign "supermag_depairing_from_physical"
+    (double @-> double @-> double @-> double @-> double @-> double
+     @-> ptr depairing_struct @-> returning int)
+
+(* ── Optimizer bindings ──────────────────────────────── *)
+
+let c_optimize_tc =
+  foreign "supermag_optimize_tc"
+    (ptr params_struct @-> ptr depairing_struct
+     @-> double @-> double @-> double @-> ptr double @-> returning int)
+
+let c_inverse_tc =
+  foreign "supermag_inverse_tc"
+    (ptr params_struct @-> ptr depairing_struct
+     @-> double @-> double @-> double @-> ptr double @-> returning int)
+
+let c_fit_tc =
+  foreign "supermag_fit_tc"
+    (ptr params_struct @-> ptr depairing_struct
+     @-> ptr double @-> ptr double @-> int
+     @-> int @-> int @-> int @-> int
+     @-> ptr double @-> returning int)
 
 (* ── Helper: CArray to OCaml array ──────────────────── *)
 
@@ -250,3 +297,76 @@ let triplet_solve ~n_layers ~thicknesses ~magnetization_angles
       n_grid (CArray.start f_out) (CArray.start x_out) in
   check_rc rc;
   (carray_to_array n_grid f_out, carray_to_array n_grid x_out)
+
+(* ── Depairing individual wrappers ───────────────────── *)
+
+let depairing_ag ~gamma_s_mev ~t_kelvin =
+  c_depairing_ag gamma_s_mev t_kelvin
+
+let depairing_zeeman ~h_tesla ~t_kelvin =
+  c_depairing_zeeman h_tesla t_kelvin
+
+let depairing_orbital_perp ~d_nm2ps ~h_tesla ~thickness_nm ~t_kelvin =
+  c_depairing_orbital_perp d_nm2ps h_tesla thickness_nm t_kelvin
+
+let depairing_orbital_par ~d_nm2ps ~h_tesla ~thickness_nm ~t_kelvin =
+  c_depairing_orbital_par d_nm2ps h_tesla thickness_nm t_kelvin
+
+let depairing_soc ~gamma_so_mev ~t_kelvin =
+  c_depairing_soc gamma_so_mev t_kelvin
+
+let depairing_from_physical ~gamma_s_mev ~h_tesla ~d_nm2ps
+    ~thickness_nm ~gamma_so_mev ~t_kelvin =
+  let dp = make depairing_struct in
+  let rc = c_depairing_from_physical gamma_s_mev h_tesla d_nm2ps
+      thickness_nm gamma_so_mev t_kelvin (addr dp) in
+  check_rc rc;
+  (getf dp dp_ag, getf dp dp_zeeman, getf dp dp_orbital, getf dp dp_spin_orbit)
+
+(* ── Optimizer wrappers ──────────────────────────────── *)
+
+let optimize_tc ~tc0 ~d_s ~xi_s ~xi_f ~gamma ~gamma_b ~e_ex ~d_f_coeff
+    ~d_s_coeff ~model ~phase ~geometry ~depairing ~d_f_lo ~d_f_hi ~tc_target =
+  let p = make_params ~tc0 ~d_s ~d_f:0.0 ~xi_s ~xi_f ~gamma ~gamma_b ~e_ex
+      ~d_f_coeff ~d_s_coeff ~model ~phase ~geometry in
+  let dp = make_depairing depairing in
+  let d_f_out = allocate double 0.0 in
+  let rc = c_optimize_tc (addr p) (addr dp) d_f_lo d_f_hi tc_target d_f_out in
+  check_rc rc;
+  !@d_f_out
+
+let inverse_tc ~tc0 ~d_s ~xi_s ~xi_f ~gamma ~gamma_b ~e_ex ~d_f_coeff
+    ~d_s_coeff ~model ~phase ~geometry ~depairing ~tc_target ~d_f_lo ~d_f_hi =
+  let p = make_params ~tc0 ~d_s ~d_f:0.0 ~xi_s ~xi_f ~gamma ~gamma_b ~e_ex
+      ~d_f_coeff ~d_s_coeff ~model ~phase ~geometry in
+  let dp = make_depairing depairing in
+  let d_f_out = allocate double 0.0 in
+  let rc = c_inverse_tc (addr p) (addr dp) tc_target d_f_lo d_f_hi d_f_out in
+  check_rc rc;
+  !@d_f_out
+
+let fit_tc ~tc0 ~d_s ~xi_s ~xi_f ~gamma ~gamma_b ~e_ex ~d_f_coeff
+    ~d_s_coeff ~model ~phase ~geometry ~depairing
+    ~d_f_data ~tc_data ~fit_gamma ~fit_gamma_b ~fit_e_ex ~fit_xi_f =
+  let n = Array.length d_f_data in
+  let p = make_params ~tc0 ~d_s ~d_f:0.0 ~xi_s ~xi_f ~gamma ~gamma_b ~e_ex
+      ~d_f_coeff ~d_s_coeff ~model ~phase ~geometry in
+  let dp = make_depairing depairing in
+  let c_df = CArray.make double n in
+  Array.iteri (fun i v -> CArray.set c_df i v) d_f_data;
+  let c_tc = CArray.make double n in
+  Array.iteri (fun i v -> CArray.set c_tc i v) tc_data;
+  let chi2_out = allocate double 0.0 in
+  let rc = c_fit_tc (addr p) (addr dp)
+      (CArray.start c_df) (CArray.start c_tc) n
+      (if fit_gamma then 1 else 0)
+      (if fit_gamma_b then 1 else 0)
+      (if fit_e_ex then 1 else 0)
+      (if fit_xi_f then 1 else 0)
+      chi2_out in
+  check_rc rc;
+  let fitted_gamma = getf p p_gamma in
+  let fitted_gamma_b = getf p p_gamma_B in
+  let fitted_e_ex = getf p p_E_ex in
+  let fitted_xi_f = getf p p_xi_F in
+  (!@chi2_out, fitted_gamma, fitted_gamma_b, fitted_e_ex, fitted_xi_f)
