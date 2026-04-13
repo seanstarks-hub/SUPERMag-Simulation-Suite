@@ -132,7 +132,7 @@ with supermag.theme_context("presentation"):
     plot_tc_vs_df(d_F, Tc, Tc0=nb["Tc"])
 ```
 
-Run `supermag.list_themes()` to see all available [WIP] presets.
+Run `supermag.list_themes()` to see all available presets.
 
 ## Available Materials
 
@@ -145,7 +145,8 @@ Run `supermag.list_themes()` to see all available [WIP] presets.
 | Co | Ferromagnet | $E_{ex}$ = 309 meV, $\xi_F$ = 0.5 nm |
 | Ni | Ferromagnet | $E_{ex}$ = 75 meV, $\xi_F$ = 2.3 nm |
 | Py | Ferromagnet | $E_{ex}$ = 20 meV, $\xi_F$ = 5.0 nm (Permalloy) |
-| Cu043Ni057| Ferromagnet | $E_{ex}$ = 11.2 meV, $\xi_F$ = 4.2 nm |
+| CuNi | Ferromagnet | $E_{ex}$ = 5.0 meV, $\xi_F$ = 10.0 nm |
+| Cu₀.₄₃Ni₀.₅₇ | Ferromagnet | $E_{ex}$ = 11.2 meV, $\xi_F$ = 4.2 nm |
 
 Register custom materials at runtime — see the example above.
 
@@ -154,7 +155,9 @@ Register custom materials at runtime — see the example above.
 Solver outputs are validated against published reference data:
 
 - **Buzdin (1982)** — Oscillatory $T_c$ suppression in S/F bilayers (JETP Lett. 35, 178)
+- **Radovic (1991)** — $T_c(d_F)$ in thin-S limit (Phys. Rev. B 44, 759)
 - **Ryazanov (2003)** — Monotonic $T_c(d_F)$ in Nb/Cu₀.₄₃Ni₀.₅₇ (Fominov model)
+- **Bergeret (2005)** — Long-range triplet amplitude in non-collinear multilayers (Rev. Mod. Phys. 77, 1321)
 
 Run the validation suite with `make validate`. See `validation/` for details.
 
@@ -173,8 +176,6 @@ All solver modules have C++ implementations with pybind11 native dispatch and pu
 ### Roadmap
 
 - Pre-built wheels via cibuildwheel CI
-- Depairing + optimizer Python wrappers
-- Fominov multilayer model in Python API
 - macOS CI support
 
 ## Contributing

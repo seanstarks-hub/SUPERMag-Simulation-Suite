@@ -3,7 +3,7 @@
 BdG (Bogoliubov–de Gennes) tight-binding solver. Diagonalizes the Nambu
 Hamiltonian on a 1D lattice to obtain the quasiparticle eigenvalue spectrum.
 
-**C++ engine:** `bdg.cpp` (Jacobi eigensolver, $n \leq 500$)
+**C++ engine:** `bdg.cpp` (Jacobi eigensolver, $n \leq 2000$)
 
 ---
 

@@ -19,6 +19,12 @@ supermag.triplet.solve(
 )
 ```
 
+> **C++ note:** The C++ engine also supports temperature dependence (`T`),
+> per-layer exchange energies (`E_ex_per_layer`), per-layer diffusion
+> coefficients (`D_per_layer`), and a mode enum
+> (`PHENOMENOLOGICAL`/`DIFFUSIVE`). These are not yet exposed in the
+> Python API.
+
 ### Parameters
 
 | Name | Type | Default | Description |

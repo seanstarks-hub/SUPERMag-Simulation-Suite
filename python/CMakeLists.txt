@@ -23,3 +23,6 @@ pybind11_add_module(_native supermag/_binding.cpp)
 
 # Link against the SUPERMag C library
 target_link_libraries(_native PRIVATE ${SUPERMAG_LIBRARY})
+
+# Install the extension into the supermag package
+install(TARGETS _native DESTINATION supermag)

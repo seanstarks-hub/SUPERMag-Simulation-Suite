@@ -1,9 +1,11 @@
 # supermag.ginzburg_landau
 
 Ginzburg-Landau free energy solver. Relaxes the TDGL equation on a 2D grid
-using double-buffered snapshot Euler integration (no magnetic field).
+using double-buffered snapshot Euler integration.
 
-**C++ engine:** `ginzburg_landau.cpp`
+**C++ engine:** `ginzburg_landau.cpp` — supports scalar mode (no field) and
+gauge mode (Peierls phases with applied field $H$, EQ-18). The Python API
+currently exposes scalar mode only.
 
 ---
 

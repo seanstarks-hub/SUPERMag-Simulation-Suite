@@ -154,28 +154,28 @@ phase=pi:    F(x) = exp(−x/ξ_F) · sin(x/ξ_F)
 
 ### EQ-7A: Abrikosov-Gorkov depairing (spin-flip scattering)
 ```
-λ_AG = Γ_s / (2 · k_B · Tc0)
+λ_AG = Γ_s / (2 · k_B · T)
 ```
 - Γ_s: spin-flip scattering rate (SI: Joules)
 - C++ impl: `depairing.cpp` → `supermag_depairing_compute()`
 
 ### EQ-7B: Zeeman depairing (Pauli paramagnetic limit)
 ```
-λ_Z = (μ_B · H)² / (2π · k_B · Tc0)²
+λ_Z = (μ_B · H)² / (2π · k_B · T)²
 ```
 - H: applied magnetic field (Tesla)
 - C++ impl: `depairing.cpp` → `supermag_depairing_compute()`
 
 ### EQ-7C: Orbital depairing (thin-film limit)
 ```
-λ_orb = D · (e·H)² · d² / (3 · ℏ² · 2π · k_B · Tc0)
+λ_orb = D · (e·H)² · d² / (3 · ℏ² · 2π · k_B · T)
 ```
 - D: diffusion coefficient, d: film thickness
 - C++ impl: `depairing.cpp` → `supermag_depairing_compute()`
 
 ### EQ-7D: Spin-orbit depairing
 ```
-λ_SO = Γ_so / (2 · k_B · Tc0)
+λ_SO = Γ_so / (2 · k_B · T)
 ```
 - Γ_so: spin-orbit scattering rate (SI: Joules)
 - C++ impl: `depairing.cpp` → `supermag_depairing_compute()`
@@ -510,7 +510,7 @@ int supermag_josephson_cpr(
     double d_F, double xi_F, double E_ex, double T, double Tc0,
     double gamma_B,
     int n_phases, const double* phase_arr,
-    double* phase_out, double* current_out,
+    double* current_out,
     double* Ic_out);
 
 /* triplet.h */

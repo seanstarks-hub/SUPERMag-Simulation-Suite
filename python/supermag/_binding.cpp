@@ -98,7 +98,8 @@ py_bdg_solve(int n_sites, double t_hop, double Delta, double E_ex, double mu) {
     int n_eigenvalues = 0;
 
     int rc = supermag_bdg_solve(n_sites, t_hop, Delta, E_ex, mu,
-                                ev_buf.mutable_data(0), &n_eigenvalues);
+                                ev_buf.mutable_data(0), &n_eigenvalues,
+                                nullptr);
     if (rc != SUPERMAG_OK)
         throw std::runtime_error(supermag_error_string(rc));
 
@@ -117,7 +118,8 @@ py_usadel_solve(double Tc0, double d_S, double d_F,
     auto x_buf = x_out.mutable_unchecked<1>();
 
     int rc = supermag_usadel_solve(Tc0, d_S, d_F, xi_S, xi_F, E_ex,
-                                   T, n_grid,
+                                   T, SUPERMAG_USADEL_LINEARIZED,
+                                   n_grid,
                                    d_buf.mutable_data(0), x_buf.mutable_data(0));
     if (rc != SUPERMAG_OK)
         throw std::runtime_error(supermag_error_string(rc));
@@ -156,6 +158,7 @@ py_gl_minimize(double alpha, double beta, double kappa,
     auto pi_buf = psi_imag.mutable_unchecked<1>();
 
     int rc = supermag_gl_minimize(alpha, beta, kappa, nx, ny, dx,
+                                  SUPERMAG_GL_SCALAR, 0.0,
                                   pr_buf.mutable_data(0), pi_buf.mutable_data(0));
     if (rc != SUPERMAG_OK)
         throw std::runtime_error(supermag_error_string(rc));
@@ -166,14 +169,20 @@ py_gl_minimize(double alpha, double beta, double kappa,
 // --- Josephson CPR solver wrapper ---
 static std::pair<py::array_t<double>, py::array_t<double>>
 py_josephson_cpr(double d_F, double xi_F, double E_ex, double T,
-                 double Tc0, int n_phases) {
+                 double Tc0, int n_phases, double gamma_B = 0.0) {
+    const double pi = 3.14159265358979323846;
     auto phase_arr = py::array_t<double>(n_phases);
     auto current_out = py::array_t<double>(n_phases);
     auto ph_buf = phase_arr.mutable_unchecked<1>();
     auto cur_buf = current_out.mutable_unchecked<1>();
 
-    int rc = supermag_josephson_cpr(d_F, xi_F, E_ex, T, Tc0,
-                                    n_phases, ph_buf.mutable_data(0), cur_buf.mutable_data(0));
+    // Generate uniform phase grid [0, 2π)
+    for (int i = 0; i < n_phases; ++i)
+        ph_buf(i) = 2.0 * pi * i / n_phases;
+
+    int rc = supermag_josephson_cpr(d_F, xi_F, E_ex, T, Tc0, gamma_B,
+                                    n_phases, ph_buf.data(0),
+                                    cur_buf.mutable_data(0), nullptr);
     if (rc != SUPERMAG_OK)
         throw std::runtime_error(supermag_error_string(rc));
 
@@ -185,7 +194,7 @@ static std::pair<py::array_t<double>, py::array_t<double>>
 py_triplet_solve(int n_layers, py::array_t<double> thicknesses,
                  py::array_t<double> magnetization_angles,
                  double xi_F, double xi_N,
-                 int n_grid) {
+                 int n_grid, double T = 4.2) {
     auto thick_buf = thicknesses.unchecked<1>();
     auto mag_buf = magnetization_angles.unchecked<1>();
 
@@ -195,7 +204,9 @@ py_triplet_solve(int n_layers, py::array_t<double> thicknesses,
     auto x_buf = x_out.mutable_unchecked<1>();
 
     int rc = supermag_triplet_solve(n_layers, thick_buf.data(0), mag_buf.data(0),
-                                    xi_F, xi_N,
+                                    nullptr, nullptr,
+                                    xi_F, xi_N, T,
+                                    SUPERMAG_TRIPLET_PHENOMENOLOGICAL,
                                     n_grid, f_buf.mutable_data(0), x_buf.mutable_data(0));
     if (rc != SUPERMAG_OK)
         throw std::runtime_error(supermag_error_string(rc));
@@ -372,14 +383,15 @@ PYBIND11_MODULE(_native, m) {
     m.def("_josephson_cpr", &py_josephson_cpr,
           "Compute Josephson current-phase relation",
           py::arg("d_F"), py::arg("xi_F"), py::arg("E_ex"),
-          py::arg("T"), py::arg("Tc0"), py::arg("n_phases"));
+          py::arg("T"), py::arg("Tc0"), py::arg("n_phases"),
+          py::arg("gamma_B") = 0.0);
 
     m.def("_triplet_solve", &py_triplet_solve,
           "Compute spin-triplet pair correlations",
           py::arg("n_layers"), py::arg("thicknesses"),
           py::arg("magnetization_angles"),
           py::arg("xi_F"), py::arg("xi_N"),
-          py::arg("n_grid"));
+          py::arg("n_grid"), py::arg("T") = 4.2);
 
     // Depairing individual channels
     m.def("_depairing_ag", &py_depairing_ag,

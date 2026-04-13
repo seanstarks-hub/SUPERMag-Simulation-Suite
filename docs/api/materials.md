@@ -1,6 +1,6 @@
 # supermag.materials
 
-Material parameter database. Ships with 3 superconductors and 5 ferromagnets
+Material parameter database. Ships with 3 superconductors and 6 ferromagnets
 covering the most common S/F heterostructure combinations.
 
 ---

@@ -1,6 +1,6 @@
 # MSVC compiler flags for Windows x86_64
 CXX      = cl
-CXXFLAGS = /std:c++17 /O2 /arch:AVX2 /EHsc /W4
+CXXFLAGS = /std:c++17 /O2 /arch:AVX2 /EHsc /W4 /MD
 CPPFLAGS = /I cpp/include /I cpp/src
 AR       = lib
 ARFLAGS  = /OUT:

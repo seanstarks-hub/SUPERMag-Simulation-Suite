@@ -1,6 +1,6 @@
 # API Reference
 
-Complete reference for the `supermag` Python package (v0.1.0).
+Complete reference for the `supermag` Python package (v0.2.0).
 
 ## Solvers
 
@@ -14,6 +14,20 @@ Complete reference for the `supermag` Python package (v0.1.0).
 | [ginzburg_landau](ginzburg_landau.md) | `minimize()` | GL free energy relaxation on 2D grid | EQ-11 |
 | [josephson](josephson.md) | `current_phase_relation()` | Josephson CPR $I(\varphi)$ via Matsubara sum | EQ-9 |
 | [triplet](triplet.md) | `solve()` | Equal-spin triplet correlations in multilayers | EQ-12 |
+
+## Depairing & Optimization
+
+| Module | Function | Description | Equation |
+|--------|----------|-------------|----------|
+| [depairing](depairing.md) | `depairing_ag()` | Abrikosov-Gor'kov spin-flip pair-breaking | EQ-7A |
+| [depairing](depairing.md) | `depairing_zeeman()` | Zeeman (Pauli paramagnetic) pair-breaking | EQ-7B |
+| [depairing](depairing.md) | `depairing_orbital_perp()` | Orbital pair-breaking (perpendicular field) | EQ-7C |
+| [depairing](depairing.md) | `depairing_orbital_par()` | Orbital pair-breaking (parallel field) | EQ-7C |
+| [depairing](depairing.md) | `depairing_soc()` | Spin-orbit coupling pair-breaking | EQ-7D |
+| [depairing](depairing.md) | `depairing_from_physical()` | All channels from lab inputs | EQ-7 |
+| [depairing](depairing.md) | `optimize_tc()` | Find $d_F$ for target $T_c$ (golden-section) | EQ-20 |
+| [depairing](depairing.md) | `inverse_tc()` | Find $d_F$ for exact $T_c$ (Brent's method) | EQ-21 |
+| [depairing](depairing.md) | `fit_tc()` | Fit parameters to experimental $T_c(d_F)$ data | EQ-22 |
 
 ## Sweep Engines
 

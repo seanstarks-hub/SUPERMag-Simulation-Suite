@@ -49,7 +49,7 @@ benchmarks/             Performance benchmarks
 
 | Command | What it runs |
 |---------|-------------|
-| `make test` | C++ unit tests (proximity, tridiag, digamma, determinant, root_scalar, stubs) |
+| `make test` | C++ unit tests (all 18 test suites: proximity, solvers, kernels, depairing, optimizer, etc.) |
 | `make pytest` | Python tests via pytest (proximity, solvers, sweeps, materials, themes, depairing) |
 | `make validate` | Validation suite against Buzdin (1982), Radovic (1991), Ryazanov (2003), Bergeret (2005) reference data |
 | `make bench` | Performance benchmarks |

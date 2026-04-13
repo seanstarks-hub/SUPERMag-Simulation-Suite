@@ -18,6 +18,9 @@ supermag.josephson.current_phase_relation(
 )
 ```
 
+> **C++ note:** The C++ engine also supports a `gamma_B` interface barrier
+> parameter. This is not yet exposed in the Python API.
+
 ### Parameters
 
 | Name | Type | Default | Description |

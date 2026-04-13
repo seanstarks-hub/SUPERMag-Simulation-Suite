@@ -16,6 +16,10 @@ Solve the Usadel equation for an S/F bilayer.
 supermag.usadel.solve(Tc0, d_S, d_F, xi_S, xi_F, E_ex, n_grid=200, T=None)
 ```
 
+> **C++ note:** The C++ engine supports both `LINEARIZED` and `NONLINEAR`
+> Usadel modes via a `mode` enum (EQ-16). The Python API currently uses
+> linearized mode only.
+
 ### Parameters
 
 | Name | Type | Default | Description |
