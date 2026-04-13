@@ -78,7 +78,7 @@ val josephson_cpr :
     [xi_f]: ferromagnetic coherence length (nm); defaults to 1.0.
     [xi_n]: triplet coherence length (nm); defaults to 10.0.
     [t]: temperature (K), must be > 0.
-    [mode]: 0 = phenomenological, 1 = Usadel.
+    [mode]: 0 = phenomenological, 1 = diffusive.
     Returns (f_triplet_out, x_out) arrays of length [n_grid]. *)
 val triplet_solve :
   n_layers:int -> thicknesses:float array ->

@@ -104,13 +104,13 @@ let c_gl_minimize =
 let c_josephson_cpr =
   foreign "supermag_josephson_cpr"
     (double @-> double @-> double @-> double @-> double
-     @-> double @-> int @-> ptr double @-> ptr double @-> ptr double
+     @-> double @-> int @-> ptr double @-> ptr double
      @-> ptr double @-> returning int)
 
 let c_triplet_solve =
   foreign "supermag_triplet_solve"
-    (int @-> ptr double @-> ptr double @-> double @-> double @-> double
-     @-> ptr double @-> ptr double @-> int
+    (int @-> ptr double @-> ptr double @-> ptr double @-> ptr double
+     @-> double @-> double @-> double @-> int
      @-> int @-> ptr double @-> ptr double @-> returning int)
 
 (* ── Helper: CArray to OCaml array ──────────────────── *)
@@ -223,13 +223,17 @@ let gl_minimize ~alpha ~beta ~kappa ~nx ~ny ~dx ~mode ~h_applied =
   (carray_to_array n psi_real, carray_to_array n psi_imag)
 
 let josephson_cpr ~d_f ~xi_f ~e_ex ~t ?(tc0 = 9.2) ~gamma_b ~n_phases =
-  let phase_out = CArray.make double n_phases in
+  let pi = Float.pi in
+  let phase_arr = CArray.make double n_phases in
+  for i = 0 to n_phases - 1 do
+    CArray.set phase_arr i (2.0 *. pi *. Float.of_int i /. Float.of_int n_phases)
+  done;
   let current_out = CArray.make double n_phases in
   let rc = c_josephson_cpr d_f xi_f e_ex t tc0 gamma_b n_phases
-      (from_voidp double null) (CArray.start phase_out)
-      (CArray.start current_out) (from_voidp double null) in
+      (CArray.start phase_arr) (CArray.start current_out)
+      (from_voidp double null) in
   check_rc rc;
-  (carray_to_array n_phases phase_out, carray_to_array n_phases current_out)
+  (carray_to_array n_phases phase_arr, carray_to_array n_phases current_out)
 
 let triplet_solve ~n_layers ~thicknesses ~magnetization_angles
     ?(xi_f = 1.0) ?(xi_n = 10.0) ~t ~mode ~n_grid =
@@ -240,8 +244,9 @@ let triplet_solve ~n_layers ~thicknesses ~magnetization_angles
   let f_out = CArray.make double n_grid in
   let x_out = CArray.make double n_grid in
   let rc = c_triplet_solve n_layers
-      (CArray.start c_thick) (CArray.start c_angles) xi_f xi_n t
-      (from_voidp double null) (from_voidp double null) mode
+      (CArray.start c_thick) (CArray.start c_angles)
+      (from_voidp double null) (from_voidp double null)
+      xi_f xi_n t mode
       n_grid (CArray.start f_out) (CArray.start x_out) in
   check_rc rc;
   (carray_to_array n_grid f_out, carray_to_array n_grid x_out)
