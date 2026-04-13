@@ -92,10 +92,12 @@ int supermag_eilenberger_solve(
 
     // Accumulate contributions from all frequencies
     std::vector<double> f_accum(n_grid, 0.0);
+    int n_freq_used = 0;
 
     for (int nf = 0; nf < N_FREQ_MAX; ++nf) {
         double omega_n = pi * T_meV * (2.0 * nf + 1.0);
         if (omega_n > omega_cut && nf > 0) break;
+        ++n_freq_used;
 
         // BCS Riccati parameter at this frequency
         double a_BCS = Delta_T / (omega_n + std::sqrt(omega_n * omega_n + Delta_T * Delta_T));
@@ -158,9 +160,10 @@ int supermag_eilenberger_solve(
         }
     }
 
-    // Normalize by total weight and frequency count normalization
+    // Normalize by total angular weight and number of frequencies
+    double norm = weight_sum * std::max(n_freq_used, 1);
     for (int j = 0; j < n_grid; ++j)
-        f_out[j] = f_accum[j] / weight_sum;
+        f_out[j] = f_accum[j] / norm;
 
     return SUPERMAG_OK;
 }

@@ -2,11 +2,7 @@
 """Run Python-level benchmarks for SUPERMag."""
 
 import time
-import sys
-import os
 import numpy as np
-
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "python"))
 
 from supermag.proximity import pair_amplitude, critical_temperature
 

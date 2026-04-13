@@ -87,31 +87,14 @@ static int triplet_solve_impl(
         double alpha = magnetization_angles[lay + 1] - magnetization_angles[lay];
         double conversion = std::fabs(std::sin(alpha));  // ∝ sin(Δα)
 
-        // Singlet amplitude at this interface:
-        // f_0 sources from S regions; use BCS amplitude
-        // f_0(x_int) ≈ Delta_T / omega_1 (linearized limit)
-        double f0_at_int = Delta_T / (omega_1 + std::sqrt(omega_1 * omega_1 + Delta_T * Delta_T));
-
-        // Triplet contribution from this interface
-        // f_1(x) = conversion · f_0(x_int) · exp(-|x - x_int|/xi_N)  [EQ-19]
-        double triplet_source = conversion * f0_at_int * T_scale;
-
+        // Triplet contribution from this interface:
+        // f_1(x) = |sin(Δα)| · exp(-|x - x_int|/xi_N)  [EQ-19]
         for (int j = 0; j < n_grid; ++j) {
             double dist = std::fabs(x_out[j] - x_int);
 
-            // Short-range singlet (oscillatory decay with xi_F)
-            std::complex<double> f0_decay = std::exp(-q_F * dist);
-
             // Long-range triplet from singlet-triplet conversion
             double f1_decay = std::exp(-dist * inv_xi_N);
-
-            // Total triplet: conversion amplitude × singlet at interface × spatial decay
-            f_triplet_out[j] += triplet_source * f1_decay;
-
-            // Also add the oscillatory component modulated by conversion
-            // This reflects the S_z=0 triplet that has short-range character
-            f_triplet_out[j] += 0.3 * conversion * std::abs(f0_decay) *
-                                std::exp(-dist / xi_F_use) * T_scale;
+            f_triplet_out[j] += conversion * f1_decay;
         }
     }
 

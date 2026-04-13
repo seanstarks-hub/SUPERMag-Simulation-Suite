@@ -53,10 +53,10 @@ int supermag_depairing_compute(
     double denom_z = 2.0 * M_PI * kBTc0;
     output->zeeman = (muBH * muBH) / (denom_z * denom_z);
 
-    // EQ-7C: Orbital  λ_orb = D·(e·H)²·d² / (3·ℏ²·2π·kB·Tc0)
+    // EQ-7C: Orbital  λ_orb = D·(e·H)²·d² / (3·ℏ·2π·kB·Tc0)
     double eH = e * input->H;
     output->orbital = D_SI * eH * eH * thick_SI * thick_SI
-                    / (3.0 * hbar * hbar * 2.0 * M_PI * kBTc0);
+                    / (3.0 * hbar * 2.0 * M_PI * kBTc0);
 
     // EQ-7D: Spin-orbit  λ_SO = Γ_so / (2·kB·Tc0)
     output->spin_orbit = Gamma_so_SI / (2.0 * kBTc0);

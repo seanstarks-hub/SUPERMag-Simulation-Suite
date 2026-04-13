@@ -63,7 +63,7 @@ def solve(Tc0, d_S, d_F, xi_S, E_ex, n_grid=200, T=None):
         Anomalous Green's function |f(x)| (Fermi-surface averaged).
     """
     if _USE_NATIVE:
-        T_val = T if T is not None else -1.0
+        T_val = T if T is not None else 0.5 * Tc0
         return _native_eilenberger_solve(Tc0, d_S, d_F, xi_S, E_ex, T_val, n_grid)
 
     # Pure Python fallback — Riccati integration with angular averaging

@@ -155,7 +155,7 @@ def critical_temperature(Tc0, d_S, d_F_array, E_ex, xi_S, xi_F,
     if phase not in ("zero", "pi"):
         raise ValueError(f"phase must be 'zero' or 'pi', got {phase!r}")
 
-    d_F_array = np.asarray(d_F_array, dtype=np.float64)
+    d_F_array = np.ascontiguousarray(d_F_array, dtype=np.float64)
 
     if _USE_NATIVE:
         model_int = 1 if model == "fominov" else 0

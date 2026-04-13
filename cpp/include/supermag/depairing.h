@@ -23,12 +23,12 @@ double supermag_depairing_ag(double gamma_s_meV, double T_kelvin);
 double supermag_depairing_zeeman(double H_tesla, double T_kelvin);
 
 /* Orbital pair-breaking (perpendicular field).
- * lambda_orb_perp = D*(e*H)^2*d^2 / (3*hbar^2*(2*pi*kB*T)) */
+ * lambda_orb_perp = D*(e*H)^2*d^2 / (3*hbar*(2*pi*kB*T)) */
 double supermag_depairing_orbital_perp(double D_nm2ps, double H_tesla,
                                        double thickness_nm, double T_kelvin);
 
 /* Orbital pair-breaking (parallel field).
- * lambda_orb_par = D*(e*H)^2*d^2 / (12*hbar^2*(2*pi*kB*T)) */
+ * lambda_orb_par = D*(e*H)^2*d^2 / (12*hbar*(2*pi*kB*T)) */
 double supermag_depairing_orbital_par(double D_nm2ps, double H_tesla,
                                       double thickness_nm, double T_kelvin);
 

@@ -157,6 +157,11 @@ py_gl_minimize(double alpha, double beta, double kappa,
     auto pr_buf = psi_real.mutable_unchecked<1>();
     auto pi_buf = psi_imag.mutable_unchecked<1>();
 
+    // Zero-initialize so C++ solver uses its own initial condition
+    // (solver checks psi_real[0] != 0 for user-supplied IC)
+    std::memset(pr_buf.mutable_data(0), 0, N * sizeof(double));
+    std::memset(pi_buf.mutable_data(0), 0, N * sizeof(double));
+
     int rc = supermag_gl_minimize(alpha, beta, kappa, nx, ny, dx,
                                   SUPERMAG_GL_SCALAR, 0.0,
                                   pr_buf.mutable_data(0), pi_buf.mutable_data(0));

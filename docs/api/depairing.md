@@ -52,7 +52,7 @@ supermag.depairing_zeeman(H_tesla, T_kelvin)
 
 Orbital pair-breaking for perpendicular applied field.
 
-$$\lambda_\text{orb\perp} = D (eH)^2 d^2 / (3\hbar^2 \cdot 2\pi k_B T)$$
+$$\lambda_\text{orb\perp} = D (eH)^2 d^2 / (3\hbar \cdot 2\pi k_B T)$$
 
 ```python
 supermag.depairing_orbital_perp(D_nm2ps, H_tesla, thickness_nm, T_kelvin)
@@ -73,7 +73,7 @@ supermag.depairing_orbital_perp(D_nm2ps, H_tesla, thickness_nm, T_kelvin)
 
 Orbital pair-breaking for parallel applied field.
 
-$$\lambda_\text{orb\parallel} = D (eH)^2 d^2 / (12\hbar^2 \cdot 2\pi k_B T)$$
+$$\lambda_\text{orb\parallel} = D (eH)^2 d^2 / (12\hbar \cdot 2\pi k_B T)$$
 
 ```python
 supermag.depairing_orbital_par(D_nm2ps, H_tesla, thickness_nm, T_kelvin)

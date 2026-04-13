@@ -57,7 +57,10 @@ def minimize(alpha, beta, kappa, nx, ny, dx):
         Complex order parameter on grid, shape (ny, nx).
     """
     if _USE_NATIVE:
-        return _native_gl_minimize(alpha, beta, kappa, nx, ny, dx)
+        psi_re, psi_im = _native_gl_minimize(alpha, beta, kappa, nx, ny, dx)
+        psi_re = np.asarray(psi_re).reshape(ny, nx)
+        psi_im = np.asarray(psi_im).reshape(ny, nx)
+        return psi_re + 1j * psi_im
 
     # Pure Python fallback — TDGL relaxation (no vector potential)
     # Equilibrium |ψ|² = −α/β for uniform state (α < 0)

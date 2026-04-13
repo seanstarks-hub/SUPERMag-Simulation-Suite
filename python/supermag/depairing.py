@@ -14,7 +14,7 @@ Physics:
     Individual channels:
         λ_AG  = Γ_s / (2·kB·T)                   (EQ-7A, spin-flip)
         λ_Z   = (μ_B·H)² / (2π·kB·T)²           (EQ-7B, Zeeman)
-        λ_orb = D·(eH)²·d² / (3ℏ²·2π·kB·T)      (EQ-7C, orbital)
+        λ_orb = D·(eH)²·d² / (3ℏ·2π·kB·T)       (EQ-7C, orbital)
         λ_SO  = Γ_so / (2·kB·T)                  (EQ-7D, spin-orbit)
 
 References:
@@ -114,7 +114,7 @@ def depairing_orbital_perp(D_nm2ps, H_tesla, thickness_nm, T_kelvin):
     """
     Orbital pair-breaking for perpendicular applied field.
 
-    λ_orb⊥ = D·(eH)²·d² / (3ℏ²·2π·kB·T)
+    λ_orb⊥ = D·(eH)²·d² / (3ℏ·2π·kB·T)
 
     Parameters
     ----------
@@ -141,14 +141,14 @@ def depairing_orbital_perp(D_nm2ps, H_tesla, thickness_nm, T_kelvin):
     d_SI = thickness_nm * _NM_TO_M
     eH = _E * H_tesla
     return D_SI * eH * eH * d_SI * d_SI / (
-        3.0 * _HBAR * _HBAR * 2.0 * np.pi * _KB * T_kelvin)
+        3.0 * _HBAR * 2.0 * np.pi * _KB * T_kelvin)
 
 
 def depairing_orbital_par(D_nm2ps, H_tesla, thickness_nm, T_kelvin):
     """
     Orbital pair-breaking for parallel applied field.
 
-    λ_orb∥ = D·(eH)²·d² / (12ℏ²·2π·kB·T)
+    λ_orb∥ = D·(eH)²·d² / (12ℏ·2π·kB·T)
 
     Parameters
     ----------
@@ -175,7 +175,7 @@ def depairing_orbital_par(D_nm2ps, H_tesla, thickness_nm, T_kelvin):
     d_SI = thickness_nm * _NM_TO_M
     eH = _E * H_tesla
     return D_SI * eH * eH * d_SI * d_SI / (
-        12.0 * _HBAR * _HBAR * 2.0 * np.pi * _KB * T_kelvin)
+        12.0 * _HBAR * 2.0 * np.pi * _KB * T_kelvin)
 
 
 def depairing_soc(Gamma_so_meV, T_kelvin):

@@ -21,11 +21,16 @@ int main() {
     double hbar = supermag_const_hbar();
     double e = supermag_const_e();
 
+    // Unit-conversion factors (lab units → SI)
+    const double meV_to_J    = 1.602176634e-22;
+    const double nm2ps_to_m2s = 1.0e-6;
+    const double nm_to_m     = 1.0e-9;
+
     // ── AG depairing ────────────────────────────────────────────
     {
         double gamma_s = 0.1;  // meV
         double lambda = supermag_depairing_ag(gamma_s, T);
-        double expected = gamma_s / (2.0 * kB * T);
+        double expected = (gamma_s * meV_to_J) / (2.0 * kB * T);
         assert(approx(lambda, expected));
         assert(lambda > 0.0);
         std::printf("  AG depairing: lambda = %.6f  PASS\n", lambda);
@@ -54,8 +59,10 @@ int main() {
         double H = 1.0;         // Tesla
         double thickness = 10.0; // nm
         double lambda = supermag_depairing_orbital_perp(D, H, thickness, T);
-        double denom = 3.0 * hbar * hbar * 2.0 * M_PI * kB * T;
-        double expected = D * (e * H) * (e * H) * thickness * thickness / denom;
+        double D_SI = D * nm2ps_to_m2s;
+        double d_SI = thickness * nm_to_m;
+        double denom = 3.0 * hbar * 2.0 * M_PI * kB * T;
+        double expected = D_SI * (e * H) * (e * H) * d_SI * d_SI / denom;
         assert(approx(lambda, expected));
         assert(lambda > 0.0);
         std::printf("  Orbital perp depairing: lambda = %.6e  PASS\n", lambda);
@@ -82,7 +89,7 @@ int main() {
     {
         double Gamma_so = 0.05;
         double lambda = supermag_depairing_soc(Gamma_so, T);
-        double expected = Gamma_so / (2.0 * kB * T);
+        double expected = (Gamma_so * meV_to_J) / (2.0 * kB * T);
         assert(approx(lambda, expected));
         assert(lambda > 0.0);
         std::printf("  SOC depairing: lambda = %.6f  PASS\n", lambda);

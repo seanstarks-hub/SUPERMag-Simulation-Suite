@@ -15,9 +15,6 @@ import os
 import sys
 import numpy as np
 
-# Ensure we can import supermag from the source tree
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "python"))
-
 from supermag.proximity import pair_amplitude, critical_temperature
 from supermag.triplet import solve as triplet_solve
 

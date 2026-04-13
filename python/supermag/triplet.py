@@ -66,8 +66,8 @@ def solve(n_layers, thicknesses, magnetization_angles, n_grid=200,
     """
     if _USE_NATIVE:
         return _native_triplet_solve(
-            n_layers, np.asarray(thicknesses, dtype=np.float64),
-            np.asarray(magnetization_angles, dtype=np.float64),
+            n_layers, np.ascontiguousarray(thicknesses, dtype=np.float64),
+            np.ascontiguousarray(magnetization_angles, dtype=np.float64),
             xi_F, xi_N,
             n_grid)
 
