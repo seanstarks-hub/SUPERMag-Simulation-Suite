@@ -185,8 +185,8 @@ def critical_temperature(Tc0, d_S, d_F_array, E_ex, xi_S, xi_F,
             continue
 
         # Compute kernel magnitude (simplified scalar form)  [EQ-2, EQ-3]
-        # 0-junction: K = q*coth(q*d_F) — cosh/sinh
-        # π-junction: K = q*tanh(q*d_F) — sinh/cosh
+        # 0-junction: K = q*coth(q*d_F) — cosh/sinh (diverges as d_F→0)
+        # π-junction: K = q*tanh(q*d_F) — sinh/cosh (vanishes as d_F→0)
         q = (1.0 + 1.0j) / xi_F
         qd = q * d_F
         if phase == "zero":
@@ -195,13 +195,13 @@ def critical_temperature(Tc0, d_S, d_F_array, E_ex, xi_S, xi_F,
             K = q * np.sinh(qd) / np.cosh(qd)
 
         # Effective coupling  [EQ-4, EQ-5]
-        # No eta = xi_S/d_S prefactor — gamma absorbs coupling strength.
+        # K is in the denominator: alpha = gamma / (gamma_B + K [+ Omega_S])
+        # As d_F→0, K (coth)→∞, so alpha→0 and Tc→Tc0 (correct physics).
         if model == "fominov" and gamma_B > 0:
-            # Base kernel coupling (T-independent part)
-            alpha_K_base = gamma * K
+            # Base coupling (T-independent numerator, K in denominator via _f)
             use_fominov = True
         else:
-            alpha_K = gamma * K
+            alpha_K = gamma / (gamma_B + K)
             use_fominov = False
 
         # Brent-like scan for highest root of
@@ -224,7 +224,7 @@ def critical_temperature(Tc0, d_S, d_F_array, E_ex, xi_S, xi_F,
                         Omega_S = 0.0
                     else:
                         Omega_S = sqrt_t_ratio * np.cosh(qS_dS) / np.sinh(qS_dS)
-                    alpha_eff = alpha_K_base / (1.0 + gamma_B * K + Omega_S)
+                    alpha_eff = gamma / (gamma_B + K + Omega_S)
                 else:
                     alpha_eff = alpha_K
                 A = alpha_eff * Tc0 / (2.0 * np.pi * T) + lambda_dep

@@ -1,14 +1,17 @@
 // Proximity effect Tc solver — digamma-based self-consistency equations.
 //
 // Thin-S model:
-//   ln(Tc0/T) = Re[ psi(1/2 + gamma*K/(2*pi*T) + Lambda_dep) - psi(1/2) ]
-//   where K is the kernel (coth or tanh), gamma is interface transparency.
+//   ln(Tc0/T) = Re[ psi(1/2 + alpha) - psi(1/2) ]
+//   alpha = gamma / (gamma_B + K) * Tc0 / (2*pi*T) + Lambda_dep
+//   K is the kernel (coth for 0-junction), gamma is coupling, gamma_B is barrier.
+//   K in the denominator: as d_F→0, K (coth)→∞, so alpha→0 and Tc→Tc0.
 //   Find highest root F(T) = 0 via Brent's method.
 //
 // Fominov model (PRB 66, 014507):
-//   2x2 matrix M(T) encodes S-layer thickness, gamma, gamma_B, kernel.
-//   Tc is where det M(T) = 0.
-//   Uses the same scan + Brent strategy on the determinant.
+//   Same digamma equation with T-dependent S-layer impedance:
+//   alpha = gamma / (gamma_B + K + Omega_S(T)) * Tc0 / (2*pi*T) + Lambda_dep
+//   Omega_S(T) = sqrt(T/Tc0) * coth(sqrt(T/Tc0) * d_S / xi_S)
+//   Reduces to thin-S when d_S→∞ (Omega_S→0) and gamma_B→0.
 
 #define _USE_MATH_DEFINES
 #include "supermag/proximity.h"
@@ -30,28 +33,22 @@ std::complex<double> apply_spin_active(const supermag_spin_active_t *sa, std::co
 struct ThinSContext {
     double Tc0;
     double gamma;
+    double gamma_B;
     double lambda_dep;
     std::complex<double> K;  // kernel value at this d_F
 };
 
 // F(T) = ln(Tc0/T) - Re[ psi(1/2 + A(T)) - psi(1/2) ]
-// where A(T) = gamma * K / (2*pi*T / Tc0) + lambda_dep
-// We use reduced temperature t = T/Tc0, so the Matsubara argument is scaled.
 //
-// More precisely, the self-consistency condition is:
-//   ln(Tc0/T) = Re[ psi(1/2 + Gamma_N * K_F / (2*pi*kB*T)) - psi(1/2) ]
+// Self-consistency equation for S/F bilayer Tc:
+//   ln(Tc0/Tc) = Re[ psi(1/2 + alpha) - psi(1/2) ]
+//   alpha = gamma / (gamma_B + K) * Tc0 / (2*pi*T) + lambda_dep
 //
-// In the thin-S limit with dimensionless coupling:
-//   A = gamma * xi_F * K / (2 * pi * T / Tc0)  but we absorb scales into gamma.
+// K = q*coth(q*d_F) for 0-junction (diverges as d_F→0 → alpha→0 → Tc→Tc0).
+// gamma is the coupling strength (numerator), gamma_B is the interface barrier
+// (additive with K in denominator).
 //
-// Simplified thin-S model:
-//   F(T) = ln(Tc0/T) - Re[ psi(1/2 + gamma*K_norm + lambda_dep) - psi(1/2) ]
-// where K_norm = K * xi_F (dimensionless kernel), and gamma absorbs coupling strength.
-//
-// For the Nb/CuNi system (Fominov fit), the relevant formula is:
-//   ln(Tc0/Tc) = Re[ psi(1/2 + alpha(Tc)) - psi(1/2) ]
-//   alpha(Tc) = gamma / (gamma_B + K_F^{-1} * q_S * cot(q_S * d_S))
-// where q_S = sqrt(2*pi*T/(D_S)), K_F = kernel.
+// Reduces to Fominov (EQ-5) by adding Omega_S(T) to the denominator.
 
 static double thin_s_equation(double T, void *ctx) {
     auto *c = static_cast<ThinSContext*>(ctx);
@@ -59,10 +56,10 @@ static double thin_s_equation(double T, void *ctx) {
 
     double log_ratio = std::log(c->Tc0 / T);
 
-    // Complex pair-breaking parameter: A = gamma * K * Tc0 / (2*pi*T)  [EQ-4]
-    // No eta = xi_S/d_S prefactor — gamma absorbs coupling strength.
+    // Pair-breaking parameter: A = gamma / (gamma_B + K) * Tc0 / (2*pi*T)  [EQ-4]
+    // K is in the denominator: larger K (thicker F) → smaller A → less suppression.
     std::complex<double> half(0.5, 0.0);
-    std::complex<double> A_complex = c->gamma * c->K * c->Tc0 / (2.0 * M_PI * T);
+    std::complex<double> A_complex = c->gamma / (c->gamma_B + c->K) * c->Tc0 / (2.0 * M_PI * T);
     A_complex += c->lambda_dep;
 
     auto psi_arg = supermag::digamma(half + A_complex);
@@ -83,13 +80,16 @@ struct FominovContext {
 };
 
 // det M(T) for the Fominov model.
-// M is a 2x2 matrix encoding S and F layer self-consistency:
 //
 // The Fominov (PRB 66 014507) Tc equation for an S/F bilayer:
 //   ln(Tc0/Tc) = Re[ psi(1/2 + alpha) - psi(1/2) ]
 // where
-//   alpha = gamma * K / (1 + gamma_B * K + Omega_S(T))
+//   alpha = gamma / (gamma_B + K + Omega_S(T)) * Tc0 / (2*pi*T) + lambda_dep
 //   Omega_S(T) = sqrt(T/Tc0) * coth(sqrt(T/Tc0) * d_S/xi_S)
+//
+// K is in the denominator alongside Omega_S and gamma_B.
+// As d_F->0, K (coth) diverges, so alpha->0 and Tc->Tc0.
+// As d_S->inf, Omega_S->0, recovering the thin-S formula.
 //
 // The S-layer thermal impedance Omega_S(T) captures the T-dependent
 // pair-breaking from finite S-layer thickness. It reduces to:
@@ -118,11 +118,10 @@ static double fominov_determinant(double T, void *ctx) {
         }
     }
 
-    // Effective pair-breaking including interface barrier and S-layer impedance:
-    // alpha = gamma * K / (1 + gamma_B * K + Omega_S(T))
-    // No eta = xi_S/d_S prefactor — gamma absorbs coupling strength.
-    std::complex<double> one(1.0, 0.0);
-    std::complex<double> alpha = c->gamma * c->K / (one + c->gamma_B * c->K + Omega_S);
+    // Effective pair-breaking with K in the denominator:
+    // alpha = gamma / (gamma_B + K + Omega_S(T))  [EQ-5]
+    // K (coth) diverges as d_F->0, driving alpha->0 and Tc->Tc0.
+    std::complex<double> alpha = c->gamma / (c->gamma_B + c->K + Omega_S);
 
     // Scale by temperature: the Matsubara frequency normalization
     alpha *= c->Tc0 / (2.0 * M_PI * T);
@@ -154,6 +153,8 @@ int supermag_proximity_solve_tc(
 
     // Compute kernel  [EQ-2, EQ-3]
     // Standard bilayer: 0-junction coth, π-junction tanh
+    // K appears in the denominator of α, so the coth divergence at d_F→0
+    // drives α→0 and Tc→Tc0 (correct physics).
     // Extended geometries use Phase 1 kernel functions (EQ-13, EQ-14, EQ-15)
     std::complex<double> K;
     if (params->geometry == SUPERMAG_GEOM_TRILAYER) {
@@ -212,6 +213,7 @@ int supermag_proximity_solve_tc(
         ThinSContext ctx;
         ctx.Tc0 = Tc0;
         ctx.gamma = params->gamma;
+        ctx.gamma_B = params->gamma_B;
         ctx.lambda_dep = lambda_dep;
         ctx.K = K;
 

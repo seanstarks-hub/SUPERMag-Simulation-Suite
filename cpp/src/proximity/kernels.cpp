@@ -2,8 +2,12 @@
 // Internal to the proximity solver — not exposed in public C API.
 //
 // q = (1+i) / xi_F  is the complex inverse decay length in the ferromagnet.
-// coth kernel: K = q * coth(q * d_F)  — 0-junction (S/F bilayer with vacuum boundary)
-// tanh kernel: K = q * tanh(q * d_F)  — π-junction (semi-infinite/thick-F limit)
+// coth kernel: K = q * coth(q * d_F)  — 0-junction (S/F bilayer, diverges as d_F→0)
+// tanh kernel: K = q * tanh(q * d_F)  — π-junction (vanishes as d_F→0)
+//
+// K appears in the denominator of the pair-breaking parameter α:
+//   α = γ / (γ_B + K [+ Ω_S]) · Tc0 / (2πT)
+// The coth kernel's divergence at d_F→0 drives α→0 and Tc→Tc0.
 //
 // Overflow safety: for |Re(q*d_F)| > 350 the raw sinh/cosh would overflow
 // double precision.  In that regime coth(z) → sgn(Re(z)) and tanh(z) → sgn(Re(z)),

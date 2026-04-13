@@ -54,7 +54,7 @@ void test_single_layer_coth() {
     // extracting K = M[1][0] / M[0][0] = q * sinh(qd) / cosh(qd) ... wait,
     // that gives tanh. The impedance convention:
     //
-    // For coth kernel (0-junction, S/F bilayer with vacuum boundary):
+    // For coth kernel (pi-junction):
     //   K_coth = q * coth(qd) = K extracted from M with free-surface BC
     //
     // M[1][0] / M[0][0] = q*sinh(qd) / cosh(qd) = q*tanh(qd) = K_tanh

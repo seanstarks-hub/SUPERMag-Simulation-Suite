@@ -78,16 +78,16 @@ int supermag_proximity_kernel_domains(
     // Extract kernel based on phase (boundary condition)
     std::complex<double> K;
     if (phase == SUPERMAG_PHASE_ZERO) {
-        // coth kernel: K = M[0][0] / M[0][1]
+        // coth kernel: K = M[1][0] / M[0][0]  (0-junction)
+        K = supermag::extract_kernel(M_total);
+    } else if (phase == SUPERMAG_PHASE_PI) {
+        // tanh kernel: K = M[0][0] / M[0][1]  (π-junction)
         if (std::abs(M_total.m[0][1]) < 1e-300) {
             *K_real = 0.0;
             *K_imag = 0.0;
             return SUPERMAG_OK;
         }
         K = M_total.m[0][0] / M_total.m[0][1];
-    } else if (phase == SUPERMAG_PHASE_PI) {
-        // tanh kernel: K = M[1][0] / M[0][0]
-        K = supermag::extract_kernel(M_total);
     } else {
         return SUPERMAG_ERR_INVALID_MODEL;
     }

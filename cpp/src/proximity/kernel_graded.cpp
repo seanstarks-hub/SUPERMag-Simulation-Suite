@@ -65,9 +65,8 @@ int supermag_proximity_kernel_graded(
     // We accumulate M_total = M_0 * M_1 * ... * M_{N-1}
     // where M_0 is the S-side slice and M_{N-1} is the vacuum-side slice.
     //
-    // For a free surface (coth kernel / 0-junction), we cascade and then
-    // extract K = M[0][0]/M[0][1] = q_coth behavior.
-    // For tanh kernel (pi-junction), K = M[1][0]/M[0][0].
+    // For coth kernel (0-junction), K = M[1][0]/M[0][0] = q*coth(qd).
+    // For tanh kernel (π-junction), K = M[0][0]/M[0][1] = q*tanh(qd).
     //
     // We compose right-to-left: start from vacuum boundary.
 
@@ -91,16 +90,16 @@ int supermag_proximity_kernel_graded(
     // Extract kernel based on phase (boundary condition)
     std::complex<double> K;
     if (phase == SUPERMAG_PHASE_ZERO) {
-        // coth kernel: K = M[0][0] / M[0][1]  (free surface BC)
+        // coth kernel: K = M[1][0] / M[0][0]  (0-junction, diverges as d_F→0)
+        K = supermag::extract_kernel(M_total);
+    } else if (phase == SUPERMAG_PHASE_PI) {
+        // tanh kernel: K = M[0][0] / M[0][1]  (π-junction, vanishes as d_F→0)
         if (std::abs(M_total.m[0][1]) < 1e-300) {
             *K_real = 0.0;
             *K_imag = 0.0;
             return SUPERMAG_OK;
         }
         K = M_total.m[0][0] / M_total.m[0][1];
-    } else if (phase == SUPERMAG_PHASE_PI) {
-        // tanh kernel: K = M[1][0] / M[0][0]  (fixed surface BC)
-        K = supermag::extract_kernel(M_total);
     } else {
         return SUPERMAG_ERR_INVALID_MODEL;
     }

@@ -99,7 +99,7 @@ q = (1 + i) / ξ_F
 ```
 K₀(d_F, ξ_F) = q · coth(q · d_F) = q · cosh(q·d_F) / sinh(q·d_F)
 ```
-- Overflow-safe: for |Re(q·d_F)| > 3.0, uses asymptotic limit coth(z) → sgn(Re(z))
+- Diverges as d_F→0 → α = γ/(γ_B + K) → 0 → Tc → Tc0 ✓
 - Phase enum: `SUPERMAG_PHASE_ZERO = 0`, Python `phase="zero"`
 - C++ impl: `kernels.cpp` → `kernel_coth()`
 - Python impl: `proximity.py` fallback, `phase="zero"` branch
@@ -108,7 +108,7 @@ K₀(d_F, ξ_F) = q · coth(q · d_F) = q · cosh(q·d_F) / sinh(q·d_F)
 ```
 K_π(d_F, ξ_F) = q · tanh(q · d_F) = q · sinh(q·d_F) / cosh(q·d_F)
 ```
-- Overflow-safe: for |Re(q·d_F)| > 3.0, uses asymptotic limit tanh(z) → sgn(Re(z))
+- Vanishes as d_F→0 (no F-layer → no pair-breaking)
 - Phase enum: `SUPERMAG_PHASE_PI = 1`, Python `phase="pi"`
 - C++ impl: `kernels.cpp` → `kernel_tanh()`
 - Python impl: `proximity.py` fallback, `phase="pi"` branch
@@ -116,16 +116,17 @@ K_π(d_F, ξ_F) = q · tanh(q · d_F) = q · sinh(q·d_F) / cosh(q·d_F)
 ### EQ-4: Thin-S self-consistency equation
 ```
 F(T) = ln(Tc0/T) − Re[ψ(1/2 + α) − ψ(1/2)]
-α = γ · K · Tc0 / (2π T) + λ_dep
+α = γ / (γ_B + K) · Tc0 / (2π T) + λ_dep
 ```
-- **No** η = ξ_S/d_S prefactor. γ absorbs coupling strength.
+- K in denominator: as d_F→0, K(coth)→∞, α→0, Tc→Tc0.
+- γ is the coupling strength, γ_B is the interface barrier.
 - C++ impl: `critical_temp.cpp` → `thin_s_equation()`
 - Python impl: `proximity.py` fallback, `model="thin_s"` branch
 
 ### EQ-5: Fominov self-consistency equation (PRB 66, 014507)
 ```
 F(T) = ln(Tc0/T) − Re[ψ(1/2 + α) − ψ(1/2)]
-α = γ · K / (1 + γ_B · K + Ω_S(T)) · Tc0 / (2π T) + λ_dep
+α = γ / (γ_B + K + Ω_S(T)) · Tc0 / (2π T) + λ_dep
 
 Ω_S(T) = √(T/Tc0) · coth(√(T/Tc0) · d_S/ξ_S)
 ```
