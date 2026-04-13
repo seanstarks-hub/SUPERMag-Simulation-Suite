@@ -3,6 +3,31 @@
 All notable changes to SUPERMag are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/).
 
+## [0.2.0] — 2026-04-12
+
+### Added
+
+- **Depairing module** (`python/supermag/depairing.py`) — Individual channel computations (`depairing_ag`, `depairing_zeeman`, `depairing_orbital_perp`, `depairing_orbital_par`, `depairing_soc`) and composite `depairing_from_physical()`. Pure-Python fallback with CODATA constants + native pybind11 dispatch.
+- **Optimizer utilities** — `optimize_tc()` (golden-section search), `inverse_tc()` (Brent root-finding), `fit_tc()` (Nelder-Mead least-squares) for matching Tc(d_F) to target values or experimental data. Python fallback + native dispatch.
+- **pybind11 bindings** for all 9 depairing/optimizer C functions in `_binding.cpp`. All 7 solver modules + 9 depairing/optimizer functions now have native dispatch.
+- **OCaml Phase 4** — 8 new ctypes FFI bindings (`depairing_ag`..`soc`, `depairing_from_physical`, `optimize_tc`, `inverse_tc`, `fit_tc`), typed `solvers.ml` wrappers, `chain.ml` Result-monad pipeline with `Domain.spawn` parallelism, `--depairing` CLI flag in `sweep_driver.ml`, 5 new FFI tests.
+- **Tutorial 05** — Depairing channels: physics, computation, and Tc suppression.
+- **Tutorial 06** — Fitting Tc(d_F) data to extract interface parameters.
+- **Equation registry** — EQ-20 (golden-section), EQ-21 (Brent inverse), EQ-22 (Nelder-Mead fit) added to `architecture.md`.
+- **Python test suite** — `test_depairing.py` with 22 tests covering all channels, composite, optimizer, inverse, and fit.
+
+### Changed
+
+- **architecture.md** — Updated §1 layer diagram (all pybind11 wraps complete), §2 equation registry (+3 entries), §3 C API signatures (depairing/optimizer match actual headers), §5 file locations (depairing.py, chain.ml).
+- **README.md** — Replaced misleading `pip install supermag` with build-from-source instructions; replaced stale "in progress" roadmap with "Implemented Solvers" section listing all 7 complete solvers; added forward-looking roadmap (cibuildwheel, macOS CI).
+- **CONTRIBUTING.md** — Added depairing/optimizer to project layout and test table.
+- **`__init__.py`** — Version bumped to 0.2.0; exports depairing/optimizer public API.
+
+### Fixed
+
+- **optimizer.cpp** — Removed unused `e_val` variable (compiler warning).
+- **OCaml `solvers.ml`** — Fixed `bdg` function missing `?mu ()` unit arg.
+
 ## [0.1.0] — 2026-04-10
 
 ### Added
@@ -14,5 +39,5 @@ Format follows [Keep a Changelog](https://keepachangelog.com/).
 - **Theme system** — 4 matplotlib presets: publication, presentation, draft, dark. Context manager support.
 - **Validation suite** — Automated comparison against Buzdin (1982) and Ryazanov (2003) reference data.
 - **C++ backend** — AVX2 SIMD-accelerated tridiagonal solver and proximity kernels with pure-Python fallback.
-- **Stub interfaces** — Usadel, Eilenberger, BdG, Ginzburg-Landau, Josephson, and spin-triplet solver signatures defined.
+- **All solvers implemented** — Usadel, Eilenberger, BdG, Ginzburg-Landau, Josephson, and spin-triplet with C++ engines and pybind11 native dispatch.
 - **CI/CD** — GitHub Actions workflows for C++ tests, Python tests, wheel building, and weekly validation.

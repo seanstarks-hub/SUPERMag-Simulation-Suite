@@ -33,6 +33,10 @@ cpp/include/supermag/   C-linkage headers (FFI boundary)
 cpp/src/                C++17 solver implementations
 cpp/test/               C++ unit tests
 python/supermag/        Python API (pybind11 bindings + pure-Python fallback)
+  proximity.py          Tc(d_F) solver
+  depairing.py          Depairing channels + optimizer/fitter utilities
+  bdg.py … usadel.py    BdG, Eilenberger, GL, Josephson, triplet, Usadel
+  _binding.cpp          pybind11 bridge (all solvers + depairing + optimizer)
 python/tests/           Python tests (pytest)
 ocaml/                  Pipeline orchestration (dune)
 validation/             Comparison against published reference data
@@ -46,17 +50,19 @@ benchmarks/             Performance benchmarks
 | Command | What it runs |
 |---------|-------------|
 | `make test` | C++ unit tests (proximity, tridiag, digamma, determinant, root_scalar, stubs) |
-| `make pytest` | Python tests via pytest |
-| `make validate` | Validation suite against Buzdin (1982), Ryazanov (2003) reference data |
+| `make pytest` | Python tests via pytest (proximity, solvers, sweeps, materials, themes, depairing) |
+| `make validate` | Validation suite against Buzdin (1982), Radovic (1991), Ryazanov (2003), Bergeret (2005) reference data |
 | `make bench` | Performance benchmarks |
 
 ## Adding a New Solver
 
-1. Implement the C++ solver in `cpp/src/solvers/` with a C-linkage header in `cpp/include/supermag/`.
+1. Implement the C++ solver in `cpp/src/solvers/` (or `cpp/src/proximity/`) with a C-linkage header in `cpp/include/supermag/`.
 2. Add pybind11 bindings in `python/supermag/_binding.cpp`.
-3. Replace the `NotImplementedError` in the corresponding `python/supermag/` stub module.
+3. Create or update the corresponding Python module in `python/supermag/` with `_USE_NATIVE` dispatch and a pure-Python fallback (see `depairing.py` for the canonical pattern).
 4. Add C++ tests in `cpp/test/` and Python tests in `python/tests/`.
-5. If applicable, add a validation case in `validation/` with expected reference data.
+5. Register new public names in `python/supermag/__init__.py`.
+6. If applicable, add a validation case in `validation/` with expected reference data.
+7. Update `architecture.md` (equation registry, C API table, file listing).
 
 ## Code Style
 

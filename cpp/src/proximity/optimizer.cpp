@@ -88,7 +88,7 @@ int supermag_inverse_tc(
     }
 
     double c_val = a, fc = fa;
-    double d_val = 0.0, e_val = 0.0;
+    double d_val = 0.0;
     bool mflag = true;
 
     if (std::fabs(fc) < std::fabs(fb)) {
@@ -97,7 +97,6 @@ int supermag_inverse_tc(
     }
     c_val = a; fc = fa;
     d_val = b - a;
-    e_val = d_val;
 
     for (int iter = 0; iter < 100; ++iter) {
         if (std::fabs(fb) < 1e-12 || std::fabs(b - a) < 1e-12) break;

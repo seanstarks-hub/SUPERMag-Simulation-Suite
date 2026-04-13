@@ -47,6 +47,7 @@
 ├─────────────────────────────────────────────────────────┤
 │  Python API         python/supermag/*.py                │
 │    ├─ proximity.py    pair_amplitude, critical_temperature
+│    ├─ depairing.py    depairing_*, optimize_tc, inverse_tc, fit_tc
 │    ├─ usadel.py       solve                             │
 │    ├─ eilenberger.py  solve                             │
 │    ├─ bdg.py          solve                             │
@@ -60,17 +61,17 @@
 ├─────────────────────────────────────────────────────────┤
 │  pybind11 bridge    python/supermag/_binding.cpp         │
 │    Module name: _native                                  │
-│    Wraps: proximity (pair_amplitude, solve_tc_batch)     │
-│    TODO: wrap usadel, eilenberger, bdg, gl, josephson,   │
-│          triplet when C++ solvers are production-ready    │
+│    Wraps: proximity, bdg, usadel, eilenberger, gl,       │
+│           josephson, triplet, depairing (6), optimizer (3)│
 ├─────────────────────────────────────────────────────────┤
 │  C++ Engine         cpp/src/**/*.cpp                     │
 │    Headers:         cpp/include/supermag/*.h              │
 │    Static library:  build/supermag.lib (.a on Linux)     │
 ├─────────────────────────────────────────────────────────┤
 │  OCaml Orchestrator ocaml/lib/**/  ocaml/bin/            │
-│    FFI stubs:       ocaml/lib/ffi/stubs.ml{i}            │
-│    Pipeline:        ocaml/lib/pipeline/sweep.ml          │
+│    FFI stubs:       ocaml/lib/ffi/stubs.ml{i} (18 C fn) │
+│    Typed solvers:   ocaml/lib/ffi/solvers.ml             │
+│    Pipeline:        ocaml/lib/pipeline/sweep.ml,chain.ml │
 │    CLI driver:      ocaml/bin/sweep_driver.ml            │
 └─────────────────────────────────────────────────────────┘
 ```
@@ -337,6 +338,36 @@ Same extraction rules as EQ-14.
 - Single domain recovers standard bilayer kernel.
 - C++ impl: `kernel_domains.cpp` → `supermag_proximity_kernel_domains()`
 
+### EQ-20: Golden-section optimizer for d_F
+```
+Minimize |Tc(d_F) − Tc_target| over [d_F_lo, d_F_hi] using golden-section search.
+φ = (√5+1)/2;  c = b−(b−a)/φ;  d = a+(b−a)/φ
+Compare |Tc(c)−target| vs |Tc(d)−target| to narrow bracket.
+```
+- Converges in ~100 iterations to Δd_F < 1e-10 nm.
+- C++ impl: `optimizer.cpp` → `supermag_optimize_tc()`
+- Python impl: `depairing.py` → `optimize_tc()` fallback
+
+### EQ-21: Brent inverse solver for d_F
+```
+Find root of F(d_F) = Tc(d_F) − Tc_target = 0 via Brent's method.
+Inverse quadratic interpolation + bisection fallback.
+```
+- Requires sign change: F(d_F_lo)·F(d_F_hi) < 0.
+- If no sign change, returns endpoint with smaller |F|.
+- C++ impl: `optimizer.cpp` → `supermag_inverse_tc()`
+- Python impl: `depairing.py` → `inverse_tc()` fallback (bisection)
+
+### EQ-22: Nelder-Mead least-squares fit
+```
+χ² = Σᵢ (Tc_calc(d_F_i; θ) − Tc_data_i)²
+θ = {γ, γ_B, E_ex, ξ_F}  (any subset flagged for fitting)
+```
+- Pure simplex optimization (derivative-free).
+- 4 fit flags independently toggle which parameters to vary.
+- C++ impl: `optimizer.cpp` → `supermag_fit_tc()` (custom Nelder-Mead)
+- Python impl: `depairing.py` → `fit_tc()` fallback (`scipy.optimize.minimize`)
+
 ---
 
 ## §3 — C API Signatures
@@ -385,10 +416,20 @@ int supermag_depairing_compute(
     const supermag_depairing_input_t *input,
     supermag_depairing_t *output);
 
-double supermag_depairing_ag(double Gamma_s, double Tc0);
-double supermag_depairing_zeeman(double H, double Tc0);
-double supermag_depairing_orbital(double D, double H, double thickness, double Tc0);
-double supermag_depairing_spin_orbit(double Gamma_so, double Tc0);
+/* depairing.h — individual channel functions */
+double supermag_depairing_ag(double gamma_s_meV, double T_kelvin);
+double supermag_depairing_zeeman(double H_tesla, double T_kelvin);
+double supermag_depairing_orbital_perp(double D_nm2ps, double H_tesla,
+                                       double thickness_nm, double T_kelvin);
+double supermag_depairing_orbital_par(double D_nm2ps, double H_tesla,
+                                      double thickness_nm, double T_kelvin);
+double supermag_depairing_soc(double Gamma_so_meV, double T_kelvin);
+
+int supermag_depairing_from_physical(
+    double gamma_s_meV, double H_tesla,
+    double D_nm2ps, double thickness_nm,
+    double Gamma_so_meV, double T_kelvin,
+    supermag_depairing_t *output);
 
 int supermag_proximity_solve_tc(
     const supermag_proximity_params_t *params,
@@ -409,23 +450,27 @@ int supermag_proximity_kernel_snf(...);
 int supermag_proximity_kernel_graded(...);
 int supermag_proximity_kernel_domains(...);
 
-int supermag_proximity_optimize(
+/* optimizer.h */
+int supermag_optimize_tc(
     supermag_proximity_params_t *params,
     const supermag_depairing_t *depairing,
-    int param_index, double lo, double hi,
-    double Tc_target, double *result_out);
-
-int supermag_proximity_inverse(
-    supermag_proximity_params_t *params,
-    const supermag_depairing_t *depairing,
-    double Tc_target, double d_F_lo, double d_F_hi,
+    double d_F_lo, double d_F_hi,
+    double Tc_target,
     double *d_F_out);
 
-int supermag_proximity_fit(
+int supermag_inverse_tc(
+    supermag_proximity_params_t *params,
+    const supermag_depairing_t *depairing,
+    double Tc_target,
+    double d_F_lo, double d_F_hi,
+    double *d_F_out);
+
+int supermag_fit_tc(
     supermag_proximity_params_t *params,
     const supermag_depairing_t *depairing,
     const double *d_F_data, const double *Tc_data, int n_data,
-    double *gamma_out, double *gamma_B_out);
+    int fit_gamma, int fit_gamma_B, int fit_E_ex, int fit_xi_F,
+    double *chi2_out);
 
 /* usadel.h */
 typedef enum { SUPERMAG_USADEL_LINEARIZED=0, SUPERMAG_USADEL_NONLINEAR=1
@@ -543,7 +588,7 @@ cpp/test/
 ### Python Package
 ```
 python/supermag/
-  __init__.py, proximity.py, usadel.py, eilenberger.py,
+  __init__.py, proximity.py, depairing.py, usadel.py, eilenberger.py,
   bdg.py, ginzburg_landau.py, josephson.py, triplet.py,
   materials.py, sweeps.py, plotting.py, _binding.cpp
 
@@ -552,13 +597,13 @@ python/supermag/themes/
 
 python/tests/
   conftest.py, test_proximity.py, test_materials.py,
-  test_solvers.py, test_sweeps.py, test_themes.py
+  test_solvers.py, test_sweeps.py, test_themes.py, test_depairing.py
 ```
 
 ### OCaml Orchestrator
 ```
 ocaml/lib/ffi/       stubs.ml, stubs.mli, solvers.ml
-ocaml/lib/pipeline/  sweep.ml
+ocaml/lib/pipeline/  sweep.ml, chain.ml
 ocaml/lib/types/     params.ml, material.ml, result.ml, geometry.ml
 ocaml/bin/           sweep_driver.ml
 ocaml/test/          test_ffi.ml, test_chain.ml, test_sweep.ml

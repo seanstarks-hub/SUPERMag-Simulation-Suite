@@ -12,11 +12,24 @@
 
 ## Installation
 
+### From source (with native C++ extension)
+
+Requires a C++ compiler and CMake:
+
 ```bash
-pip install supermag
+git clone https://github.com/seanstarks-hub/SUPERMag-Simulation-Suite.git
+cd SUPERMag-Simulation-Suite
+make shared          # build libsupermag
+pip install ./python # build native extension + install
 ```
 
-No C++ compiler required — pre-built wheels include the compiled solvers.
+### Pure-Python fallback
+
+All solvers include pure-Python fallbacks that work without the C++ extension:
+
+```bash
+pip install ./python
+```
 
 ```python
 import supermag
@@ -145,16 +158,24 @@ Solver outputs are validated against published reference data:
 
 Run the validation suite with `make validate`. See `validation/` for details.
 
-## Roadmap
+## Implemented Solvers
 
-Planned solver modules (interfaces are defined, implementations in progress):
+All solver modules have C++ implementations with pybind11 native dispatch and pure-Python fallbacks:
 
+- **Proximity** — $T_c(d_F)$ via digamma self-consistency (thin-S and Fominov models)
 - **Usadel** — diffusive-limit quasiclassical Green's functions
 - **Eilenberger** — clean-limit Riccati parameterization
 - **BdG** — tight-binding Bogoliubov–de Gennes Hamiltonian
 - **Ginzburg-Landau** — free energy minimization near $T_c$
 - **Josephson** — current-phase relations for S/F/S junctions
 - **Spin-Triplet** — long-range triplet correlations in magnetic multilayers
+
+### Roadmap
+
+- Pre-built wheels via cibuildwheel CI
+- Depairing + optimizer Python wrappers
+- Fominov multilayer model in Python API
+- macOS CI support
 
 ## Contributing
 
