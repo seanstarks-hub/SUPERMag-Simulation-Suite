@@ -34,3 +34,8 @@ __pycache__/
 Thumbs.db
 
 # Packaging
+wheelhouse/
+.eggs/
+
+# OCaml
+_opam/

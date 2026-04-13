@@ -27,6 +27,7 @@ build:
 shared:
 	cmake -B build -S python -DCMAKE_BUILD_TYPE=Release -DSUPERMAG_BUILD_SHARED=ON
 	cmake --build build
+	cmake --build build
 
 # ── C++ Tests ────────────────────────────────────────────────
 test: build
@@ -51,7 +52,7 @@ bench:
 	python benchmarks/bench_runner.py
 
 wheel:
-	pip wheel python/ -w dist/
+	pip wheel . -w dist/
 
 docs:
 	@echo "Documentation generation not yet configured."

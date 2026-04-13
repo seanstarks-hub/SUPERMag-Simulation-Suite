@@ -2,29 +2,36 @@
 
 ## Prerequisites
 
-- **C++17 compiler**: MSVC on Windows (`/std:c++17 /arch:AVX2`), GCC/Clang on Linux
 - **Python ≥ 3.9** with NumPy ≥ 1.22, Matplotlib ≥ 3.5, pytest ≥ 7.0
+- **C++17 compiler** (optional, for native acceleration): GCC/Clang on Linux, MSVC on Windows
+- **CMake ≥ 3.15** (optional, pulled automatically by `pip install`)
 - **OCaml ≥ 5.0** with dune (pipeline development only)
 
-## Building from Source
+## Getting Started
 
 ```bash
 git clone https://github.com/seanstarks-hub/SUPERMag-Simulation-Suite.git
 cd SUPERMag-Simulation-Suite
 
-# Build C++ library
-make build
+# Install in development mode (pure-Python, no compiler needed)
+pip install -e .
 
-# Run C++ tests
-make test
+# Or install with native C++ acceleration (requires C++17 compiler + CMake)
+pip install .
 
 # Run Python tests
-pip install numpy matplotlib pytest
-make pytest
+pytest python/tests/
+
+# Run C++ tests (requires CMake)
+make test
 
 # Run validation suite against published reference data
 make validate
 ```
+
+All solvers have pure-Python fallbacks, so a C++ compiler is only needed for
+native performance. CMake handles the entire C++ build — no manual `make build`
+step is required.
 
 ## Project Layout
 
@@ -49,8 +56,8 @@ benchmarks/             Performance benchmarks
 
 | Command | What it runs |
 |---------|-------------|
-| `make test` | C++ unit tests (all 18 test suites: proximity, solvers, kernels, depairing, optimizer, etc.) |
-| `make pytest` | Python tests via pytest (proximity, solvers, sweeps, materials, themes, depairing) |
+| `pytest python/tests/` | Python tests (proximity, solvers, sweeps, materials, themes, depairing) |
+| `make test` | C++ unit tests via CMake (all 18 test suites) |
 | `make validate` | Validation suite against Buzdin (1982), Radovic (1991), Ryazanov (2003), Bergeret (2005) reference data |
 | `make bench` | Performance benchmarks |
 
@@ -73,6 +80,6 @@ benchmarks/             Performance benchmarks
 ## Pull Requests
 
 1. Fork the repository and create a feature branch.
-2. Ensure `make test` and `make pytest` pass.
+2. Ensure `pytest python/tests/` passes (and `make test` if you changed C++ code).
 3. Add or update tests for any changed functionality.
 4. Open a PR with a clear description of what changed and why.

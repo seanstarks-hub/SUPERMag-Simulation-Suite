@@ -43,7 +43,7 @@ jobs:
           echo "All C++ tests passed."
 
       - name: Install Python package
-        run: pip install ./python
+        run: pip install .
 
       - name: Run pytest
         run: python -m pytest python/tests/ -v

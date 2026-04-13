@@ -17,7 +17,7 @@
 All solvers include pure-Python fallbacks. No compiler needed:
 
 ```bash
-pip install ./python
+pip install .
 ```
 
 ```python
@@ -38,7 +38,7 @@ handled automatically by `pip install` — no separate `make build` step is need
 2. Open a **Developer Command Prompt** (or load `vcvars64.bat`).
 3. Run:
    ```bash
-   pip install ./python
+   pip install .
    ```
 
 CMake is bundled with Visual Studio. If you need a standalone copy: `pip install cmake`.
@@ -52,7 +52,7 @@ sudo apt install g++ cmake
 # Fedora
 sudo dnf install gcc-c++ cmake
 
-pip install ./python
+pip install .
 ```
 
 AVX2 is used automatically when the CPU supports it; the build succeeds without
