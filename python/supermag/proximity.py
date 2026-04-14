@@ -208,7 +208,8 @@ def critical_temperature(Tc0, d_S, d_F_array, E_ex, xi_S, xi_F,
         # F(T) = ln(Tc0/T) - Re[psi(0.5 + alpha*Tc0/(2*pi*T) + lambda_dep) - psi(0.5)]
         best_tc = 0.0
         psi_half = float(_digamma(0.5))
-        T_vals = np.linspace(0.01, Tc0, 1000)
+        # Log-spaced grid: better resolution at low T where narrow roots can be missed
+        T_vals = np.logspace(np.log10(1e-4), np.log10(Tc0), 1000)
         for j in range(len(T_vals) - 1):
             T_a, T_b = T_vals[j], T_vals[j + 1]
 

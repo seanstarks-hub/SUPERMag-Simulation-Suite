@@ -199,7 +199,7 @@ int supermag_proximity_solve_tc(
     }
 
     double lambda_dep = supermag_depairing_total(depairing);
-    double T_min = 0.01;
+    double T_min = 1e-4;
     double T_max = Tc0;
 
     // Self-consistency equation selection:
@@ -217,7 +217,7 @@ int supermag_proximity_solve_tc(
         ctx.lambda_dep = lambda_dep;
         ctx.K = K;
 
-        double root = supermag::root_scalar_solve(thin_s_equation, &ctx, T_min, T_max, 1e-9);
+        double root = supermag::root_scalar_solve_log(thin_s_equation, &ctx, T_min, T_max, 1e-9);
         if (std::isnan(root)) {
             *tc_out = 0.0;
         } else {
@@ -233,7 +233,7 @@ int supermag_proximity_solve_tc(
         ctx.lambda_dep = lambda_dep;
         ctx.K = K;
 
-        double root = supermag::root_scalar_solve(fominov_determinant, &ctx, T_min, T_max, 1e-9);
+        double root = supermag::root_scalar_solve_log(fominov_determinant, &ctx, T_min, T_max, 1e-9);
         if (std::isnan(root)) {
             *tc_out = 0.0;
         } else {

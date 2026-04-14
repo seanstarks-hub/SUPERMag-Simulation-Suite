@@ -131,4 +131,57 @@ double root_scalar_solve(
     return highest_root;
 }
 
+double root_scalar_solve_log(
+    double (*f)(double, void*),
+    void *context,
+    double T_min,
+    double T_max,
+    double tol)
+{
+    // Log-spaced grid gives much better resolution at low T.
+    // At T=0.1 K with Tc0=9 K, spacing is ~0.001 K vs ~0.009 K for linear.
+    const int N = 1000;
+    double log_min = std::log(T_min);
+    double log_max = std::log(T_max);
+    double d_log = (log_max - log_min) / N;
+
+    std::vector<double> T_grid(N + 1);
+    std::vector<double> f_grid(N + 1);
+    for (int i = 0; i <= N; ++i) {
+        T_grid[i] = std::exp(log_min + i * d_log);
+        f_grid[i] = f(T_grid[i], context);
+    }
+
+    struct Bracket { double a, b; };
+    std::vector<Bracket> brackets;
+    double highest_root = -std::numeric_limits<double>::infinity();
+    bool found_exact = false;
+
+    for (int i = 0; i <= N; ++i) {
+        if (f_grid[i] == 0.0) {
+            if (T_grid[i] > highest_root) {
+                highest_root = T_grid[i];
+                found_exact = true;
+            }
+        }
+        if (i < N && f_grid[i] * f_grid[i + 1] < 0.0) {
+            brackets.push_back({T_grid[i], T_grid[i + 1]});
+        }
+    }
+
+    for (auto &br : brackets) {
+        double root = brent(f, context, br.a, br.b, tol);
+        if (root > highest_root) {
+            highest_root = root;
+            found_exact = true;
+        }
+    }
+
+    if (!found_exact) {
+        return std::numeric_limits<double>::quiet_NaN();
+    }
+
+    return highest_root;
+}
+
 } // namespace supermag

@@ -15,6 +15,16 @@ double root_scalar_solve(
     double tol
 );
 
+// Log-spaced variant for problems where roots can span orders of magnitude.
+// Requires T_min > 0. Uses log-spaced grid for better resolution at low T.
+double root_scalar_solve_log(
+    double (*f)(double, void*),
+    void *context,
+    double T_min,
+    double T_max,
+    double tol
+);
+
 } // namespace supermag
 
 #endif
