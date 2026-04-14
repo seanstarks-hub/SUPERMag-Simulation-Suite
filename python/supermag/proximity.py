@@ -197,7 +197,7 @@ def critical_temperature(Tc0, d_S, d_F_array, E_ex, xi_S, xi_F,
         # Effective coupling  [EQ-4, EQ-5]
         # K is in the denominator: alpha = gamma / (gamma_B + K [+ Omega_S])
         # As d_F→0, K (coth)→∞, so alpha→0 and Tc→Tc0 (correct physics).
-        if model == "fominov" and gamma_B > 0:
+        if model == "fominov":
             # Base coupling (T-independent numerator, K in denominator via _f)
             use_fominov = True
         else:
