@@ -30,7 +30,7 @@ supermag.critical_temperature(
 | `xi_S` | float | *required* | Superconductor coherence length (nm) |
 | `xi_F` | float | *required* | Ferromagnet coherence length (nm) |
 | `gamma` | float | `0.3` | Interface transparency parameter (dimensionless) |
-| `gamma_B` | float | `0.0` | Interface barrier parameter (Fominov model only) |
+| `gamma_B` | float | `0.0` | Interface barrier parameter (denominator of α, both models) |
 | `D_F` | float | `2.5e-4` | Diffusion coefficient in ferromagnet (m²/s) |
 | `model` | str | `"thin_s"` | Self-consistency model: `"thin_s"` (EQ-4) or `"fominov"` (EQ-5) |
 | `phase` | str | `"zero"` | Junction phase: `"zero"` (coth kernel) or `"pi"` (tanh kernel) |
@@ -57,8 +57,8 @@ All default to `0.0` if omitted.
 
 ### Equations
 
-- **`model="thin_s"`** uses EQ-4: $F(T) = \ln(T_{c0}/T) - \text{Re}[\psi(\tfrac{1}{2} + \alpha) - \psi(\tfrac{1}{2})]$ with $\alpha = \gamma K \tfrac{T_{c0}}{2\pi T} + \lambda_\text{dep}$
-- **`model="fominov"`** uses EQ-5: same form with $\alpha = \frac{\gamma K}{1 + \gamma_B K + \Omega_S(T)} \tfrac{T_{c0}}{2\pi T} + \lambda_\text{dep}$ where $\Omega_S(T) = \sqrt{T/T_{c0}} \coth(\sqrt{T/T_{c0}} \cdot d_S/\xi_S)$
+- **`model="thin_s"`** uses EQ-4: $F(T) = \ln(T_{c0}/T) - \text{Re}[\psi(\tfrac{1}{2} + \alpha) - \psi(\tfrac{1}{2})]$ with $\alpha = \frac{\gamma}{\gamma_B + K} \cdot \frac{T_{c0}}{2\pi T} + \lambda_\text{dep}$
+- **`model="fominov"`** uses EQ-5: same form with $\alpha = \frac{\gamma}{\gamma_B + K + \Omega_S(T)} \cdot \frac{T_{c0}}{2\pi T} + \lambda_\text{dep}$ where $\Omega_S(T) = \sqrt{T/T_{c0}} \coth(\sqrt{T/T_{c0}} \cdot d_S/\xi_S)$
 
 ### Example
 

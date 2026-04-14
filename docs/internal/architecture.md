@@ -116,23 +116,25 @@ K_π(d_F, ξ_F) = q · tanh(q · d_F) = q · sinh(q·d_F) / cosh(q·d_F)
 ### EQ-4: Thin-S self-consistency equation
 ```
 F(T) = ln(Tc0/T) − Re[ψ(1/2 + α) − ψ(1/2)]
-α = γ · K · Tc0 / (2π T) + λ_dep
+α = γ / (γ_B + K) · Tc0 / (2π T) + λ_dep
 ```
-- **No** η = ξ_S/d_S prefactor. γ absorbs coupling strength.
+- K in denominator: as d_F → 0, K (coth kernel) diverges, α → 0, Tc → Tc0.
+- γ is coupling strength (numerator), γ_B is interface barrier (denominator).
+- This is the thin-S limit of the Fominov model (Ω_S = 0).
 - C++ impl: `critical_temp.cpp` → `thin_s_equation()`
 - Python impl: `proximity.py` fallback, `model="thin_s"` branch
 
 ### EQ-5: Fominov self-consistency equation (PRB 66, 014507)
 ```
 F(T) = ln(Tc0/T) − Re[ψ(1/2 + α) − ψ(1/2)]
-α = γ · K / (1 + γ_B · K + Ω_S(T)) · Tc0 / (2π T) + λ_dep
+α = γ / (γ_B + K + Ω_S(T)) · Tc0 / (2π T) + λ_dep
 
 Ω_S(T) = √(T/Tc0) · coth(√(T/Tc0) · d_S/ξ_S)
 ```
 - T-dependent S-layer impedance Ω_S(T) accounts for finite-thickness
   superconductor. At T→0: Ω_S→0, recovers simplified formula.
   Thick-S limit (d_S≫ξ_S): Ω_S→√(T/Tc0). Thin-S limit: Ω_S→ξ_S/d_S.
-- Reduces to EQ-4 when γ_B → 0 and Ω_S → 0.
+- Reduces to EQ-4 when Ω_S → 0.
 - C++ impl: `critical_temp.cpp` → `fominov_determinant()`
 - Python impl: `proximity.py` fallback, `model="fominov"` branch
 

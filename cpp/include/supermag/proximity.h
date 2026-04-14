@@ -55,7 +55,7 @@ typedef struct {
     double xi_S;        /* Superconductor coherence length (nm) */
     double xi_F;        /* Ferromagnet coherence length (nm) */
     double gamma;       /* Interface transparency parameter (dimensionless) */
-    double gamma_B;     /* Interface barrier parameter (dimensionless, Fominov model) */
+    double gamma_B;     /* Interface barrier parameter (denominator of α, both models) */
     double E_ex;        /* Exchange energy (meV) */
     double D_F;         /* Diffusion coefficient in F layer (nm^2/ps) */
     double D_S;         /* Diffusion coefficient in S layer (nm^2/ps) */
