@@ -24,6 +24,9 @@ Format follows [Keep a Changelog](https://keepachangelog.com/).
 - **Tutorial 07** (`07_explorer.ipynb`) — Combinatorial SC×FM explorer: enumerates all 18 bilayer combinations with per-pair γ/γ_B from the interface catalogue, uses Fominov model for finite-thickness S layers, visualizes min-Tc heatmap and normalized suppression matrix, ranks pairs by target temperature with γ/source metadata, demonstrates constraint filtering.
 - **`optimizer.py`** — Multi-parameter design optimization for S/F heterostructures. `optimize_design()` finds (d_S, d_F, γ) via Nelder-Mead to hit a target Tc. `sensitivity_at()` computes ∂Tc/∂p via central finite differences. `robust_optimize()` adds sensitivity penalty for fabrication-tolerant designs.
 - **Tutorial 08** (`08_design_optimizer.ipynb`) — Design optimizer workflow: Nb/Cu₀.₄₃Ni₀.₅₇ π-junction with Tc = 5 K target. Covers Tc landscape visualization, single-objective and multi-parameter optimization, sensitivity analysis, robust optimization, and design comparison.
+- **Tutorial 09** (`09_supercurrent_diode.ipynb`) — Supercurrent diode effect via asymmetric SQUID model: two S/F/S junctions with different d_F in a flux-biased loop. Computes CPR, extracts I_c⁺/I_c⁻, sweeps d_F₂, external flux, and temperature.
+- **Tutorial 10** (`10_pi_junction.ipynb`) — π-junction phase diagram: maps 0–π boundary by comparing Tc(phase="zero") vs Tc(phase="pi"), multi-material comparison (CuNi/Py/Ni), sweet-spot thickness finder, interface barrier effects.
+- **Tutorial 11** (`11_triplet_correlations.ipynb`) — Spin-triplet correlations in magnetic multilayers: collinear vs non-collinear bilayers, sin(α) angular dependence, domain-wall triplet generation, wall-width scaling, F1/N/F2 spin-valve switching.
 
 ### Changed
 
