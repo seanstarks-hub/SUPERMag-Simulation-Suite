@@ -18,12 +18,12 @@ let parse_layer (s : string) : (Geometry.layer, string) result =
        Error (Printf.sprintf "thickness must be > 0: %s" name)
      | Some d ->
        let mat = String.trim name in
-       if Material.get_superconductor mat <> None then
-         Ok (Geometry.S_layer { thickness = d; material = mat })
-       else if Material.get_ferromagnet mat <> None then
-         Ok (Geometry.F_layer { thickness = d; material = mat })
-       else
-         Error (Printf.sprintf "unknown material: %s" mat))
+       (match Material.get_superconductor mat with
+        | Some sc -> Ok (Geometry.S_layer { thickness = d; sc })
+        | None ->
+          match Material.get_ferromagnet mat with
+          | Some fm -> Ok (Geometry.F_layer { thickness = d; fm })
+          | None -> Error (Printf.sprintf "unknown material: %s" mat)))
   | _ -> Error (Printf.sprintf "expected Material:thickness, got: %s" s)
 
 let parse_stack (s : string) : (Geometry.geometry, string) result =
@@ -55,23 +55,23 @@ let classify_layers (layers : Geometry.layer list) =
     | Geometry.I_layer _ -> (s, f, n, i + 1)
   ) (0, 0, 0, 0) layers
 
-(** Extract the first S-layer material, or None. *)
+(** Extract the first S-layer material record, or None. *)
 let first_sc (layers : Geometry.layer list) =
   List.find_map (fun l ->
     match l with
-    | Geometry.S_layer { material; _ } -> Material.get_superconductor material
+    | Geometry.S_layer { sc; _ } -> Some sc
     | _ -> None
   ) layers
 
-(** Extract the first F-layer material, or None. *)
+(** Extract the first F-layer material record, or None. *)
 let first_fm (layers : Geometry.layer list) =
   List.find_map (fun l ->
     match l with
-    | Geometry.F_layer { material; _ } -> Material.get_ferromagnet material
+    | Geometry.F_layer { fm; _ } -> Some fm
     | _ -> None
   ) layers
 
-(** Extract S-layer thickness, or 0. *)
+(** Extract total S-layer thickness. *)
 let s_thickness (layers : Geometry.layer list) =
   List.fold_left (fun acc l ->
     match l with
