@@ -101,6 +101,6 @@ let explore ~(stacks : Geometry.geometry list) ~d_f_array
     | _ -> None
   ) results in
   let ranked = List.sort (fun a b ->
-    compare (a : Result.device_result).tc_min b.tc_min
+    compare a.Result.tc_min b.Result.tc_min
   ) passing in
   Result.{ ranked; total_evaluated = List.length stacks }

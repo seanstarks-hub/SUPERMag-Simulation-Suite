@@ -53,10 +53,10 @@ let parallel_solver_chain (steps : solver_step_r list)
 open Supermag_ffi
 
 (** Find the index of the minimum value in a float array.
-    Returns 0 for empty arrays. *)
+    Raises [Invalid_argument] for empty arrays. *)
 let argmin_float arr =
   let n = Array.length arr in
-  if n = 0 then 0
+  if n = 0 then invalid_arg "argmin_float: empty array"
   else
     let idx = ref 0 in
     for i = 1 to n - 1 do
