@@ -23,6 +23,7 @@
 #include "supermag/ginzburg_landau.h"
 #include "supermag/josephson.h"
 #include "supermag/triplet.h"
+#include "supermag/solver_options.h"
 
 namespace py = pybind11;
 
@@ -119,6 +120,7 @@ py_usadel_solve(double Tc0, double d_S, double d_F,
 
     int rc = supermag_usadel_solve(Tc0, d_S, d_F, xi_S, xi_F, E_ex,
                                    T, SUPERMAG_USADEL_LINEARIZED,
+                                   nullptr,
                                    n_grid,
                                    d_buf.mutable_data(0), x_buf.mutable_data(0));
     if (rc != SUPERMAG_OK)
@@ -139,7 +141,7 @@ py_eilenberger_solve(double Tc0, double d_S, double d_F,
     auto x_buf = x_out.mutable_unchecked<1>();
 
     int rc = supermag_eilenberger_solve(Tc0, d_S, d_F, xi_S, E_ex,
-                                        T, n_grid,
+                                        T, nullptr, n_grid,
                                         f_buf.mutable_data(0), x_buf.mutable_data(0));
     if (rc != SUPERMAG_OK)
         throw std::runtime_error(supermag_error_string(rc));
@@ -150,7 +152,8 @@ py_eilenberger_solve(double Tc0, double d_S, double d_F,
 // --- Ginzburg-Landau solver wrapper ---
 static std::pair<py::array_t<double>, py::array_t<double>>
 py_gl_minimize(double alpha, double beta, double kappa,
-               int nx, int ny, double dx) {
+               int nx, int ny, double dx,
+               int mode = 0, double H_applied = 0.0) {
     int N = nx * ny;
     auto psi_real = py::array_t<double>(N);
     auto psi_imag = py::array_t<double>(N);
@@ -162,8 +165,10 @@ py_gl_minimize(double alpha, double beta, double kappa,
     std::memset(pr_buf.mutable_data(0), 0, N * sizeof(double));
     std::memset(pi_buf.mutable_data(0), 0, N * sizeof(double));
 
+    supermag_gl_mode_t gl_mode = (mode == 1) ? SUPERMAG_GL_GAUGE : SUPERMAG_GL_SCALAR;
+
     int rc = supermag_gl_minimize(alpha, beta, kappa, nx, ny, dx,
-                                  SUPERMAG_GL_SCALAR, 0.0,
+                                  gl_mode, H_applied, nullptr,
                                   pr_buf.mutable_data(0), pi_buf.mutable_data(0));
     if (rc != SUPERMAG_OK)
         throw std::runtime_error(supermag_error_string(rc));
@@ -186,7 +191,7 @@ py_josephson_cpr(double d_F, double xi_F, double E_ex, double T,
         ph_buf(i) = 2.0 * pi * i / n_phases;
 
     int rc = supermag_josephson_cpr(d_F, xi_F, E_ex, T, Tc0, gamma_B,
-                                    n_phases, ph_buf.data(0),
+                                    n_phases, ph_buf.data(0), nullptr,
                                     cur_buf.mutable_data(0), nullptr);
     if (rc != SUPERMAG_OK)
         throw std::runtime_error(supermag_error_string(rc));
@@ -199,7 +204,10 @@ static std::pair<py::array_t<double>, py::array_t<double>>
 py_triplet_solve(int n_layers, py::array_t<double> thicknesses,
                  py::array_t<double> magnetization_angles,
                  double xi_F, double xi_N,
-                 int n_grid, double T = 4.2) {
+                 int n_grid, double T = 4.2, double Tc0 = 9.2,
+                 py::object E_ex_per_layer_obj = py::none(),
+                 py::object D_per_layer_obj = py::none(),
+                 int mode = 0) {
     auto thick_buf = thicknesses.unchecked<1>();
     auto mag_buf = magnetization_angles.unchecked<1>();
 
@@ -208,10 +216,25 @@ py_triplet_solve(int n_layers, py::array_t<double> thicknesses,
     auto f_buf = f_triplet_out.mutable_unchecked<1>();
     auto x_buf = x_out.mutable_unchecked<1>();
 
+    const double* E_ex_ptr = nullptr;
+    const double* D_ptr = nullptr;
+    py::array_t<double> E_ex_arr, D_arr;
+
+    if (!E_ex_per_layer_obj.is_none()) {
+        E_ex_arr = E_ex_per_layer_obj.cast<py::array_t<double>>();
+        E_ex_ptr = E_ex_arr.unchecked<1>().data(0);
+    }
+    if (!D_per_layer_obj.is_none()) {
+        D_arr = D_per_layer_obj.cast<py::array_t<double>>();
+        D_ptr = D_arr.unchecked<1>().data(0);
+    }
+
+    supermag_triplet_mode_t trip_mode =
+        (mode == 1) ? SUPERMAG_TRIPLET_DIFFUSIVE : SUPERMAG_TRIPLET_PHENOMENOLOGICAL;
+
     int rc = supermag_triplet_solve(n_layers, thick_buf.data(0), mag_buf.data(0),
-                                    nullptr, nullptr,
-                                    xi_F, xi_N, T,
-                                    SUPERMAG_TRIPLET_PHENOMENOLOGICAL,
+                                    E_ex_ptr, D_ptr,
+                                    xi_F, xi_N, T, Tc0, trip_mode,
                                     n_grid, f_buf.mutable_data(0), x_buf.mutable_data(0));
     if (rc != SUPERMAG_OK)
         throw std::runtime_error(supermag_error_string(rc));
@@ -383,7 +406,9 @@ PYBIND11_MODULE(_native, m) {
     m.def("_gl_minimize", &py_gl_minimize,
           "Minimize Ginzburg-Landau free energy on 2D grid",
           py::arg("alpha"), py::arg("beta"), py::arg("kappa"),
-          py::arg("nx"), py::arg("ny"), py::arg("dx"));
+          py::arg("nx"), py::arg("ny"), py::arg("dx"),
+          py::arg("mode") = 0,
+          py::arg("H_applied") = 0.0);
 
     m.def("_josephson_cpr", &py_josephson_cpr,
           "Compute Josephson current-phase relation",
@@ -396,7 +421,11 @@ PYBIND11_MODULE(_native, m) {
           py::arg("n_layers"), py::arg("thicknesses"),
           py::arg("magnetization_angles"),
           py::arg("xi_F"), py::arg("xi_N"),
-          py::arg("n_grid"), py::arg("T") = 4.2);
+          py::arg("n_grid"), py::arg("T") = 4.2,
+          py::arg("Tc0") = 9.2,
+          py::arg("E_ex_per_layer") = py::none(),
+          py::arg("D_per_layer") = py::none(),
+          py::arg("mode") = 0);
 
     // Depairing individual channels
     m.def("_depairing_ag", &py_depairing_ag,

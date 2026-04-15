@@ -14,6 +14,7 @@ void test_josephson_sinusoidal_limit() {
         50.0, 5.0, 10.0, 4.0, 9.2,  // large d_F = 50nm
         0.0,                          // gamma_B = 0
         n, nullptr,                   // auto-generate phases
+        nullptr,                      // opts
         current.data(), nullptr);
     assert(rc == SUPERMAG_OK);
 
@@ -30,6 +31,7 @@ void test_josephson_pi_junction() {
     int rc = supermag_josephson_cpr(
         12.5, 5.0, 10.0, 4.0, 9.2,
         0.0, n, nullptr,
+        nullptr,
         current.data(), nullptr);
     assert(rc == SUPERMAG_OK);
 
@@ -52,10 +54,10 @@ void test_josephson_barrier() {
     double Ic_no_barrier, Ic_with_barrier;
 
     supermag_josephson_cpr(10.0, 5.0, 10.0, 4.0, 9.2, 0.0,
-                               n, nullptr,
+                               n, nullptr, nullptr,
                                I0.data(), &Ic_no_barrier);
     supermag_josephson_cpr(10.0, 5.0, 10.0, 4.0, 9.2, 1.0,
-                               n, nullptr,
+                               n, nullptr, nullptr,
                                IB.data(), &Ic_with_barrier);
 
     // Barrier should reduce Ic
@@ -78,6 +80,7 @@ void test_josephson_user_phases() {
     int rc = supermag_josephson_cpr(
         10.0, 5.0, 10.0, 4.0, 9.2, 0.0,
         n, phase_in.data(),
+        nullptr,
         current.data(), nullptr);
     assert(rc == SUPERMAG_OK);
 
@@ -100,6 +103,7 @@ void test_josephson_absolute_ic() {
     int rc = supermag_josephson_cpr(
         10.0, 5.0, 10.0, 4.0, 9.2, 0.0,
         n, nullptr,
+        nullptr,
         current.data(), &Ic);
     assert(rc == SUPERMAG_OK);
     assert(Ic > 0.0);
@@ -116,7 +120,7 @@ void test_josephson_absolute_ic() {
 
 void test_josephson_null() {
     int rc = supermag_josephson_cpr(10.0, 5.0, 10.0, 4.0, 9.2, 0.0,
-                                    32, nullptr,
+                                    32, nullptr, nullptr,
                                     nullptr, nullptr);
     assert(rc == SUPERMAG_ERR_NULL_PTR);
     std::printf("  PASS: test_josephson_null\n");
@@ -126,10 +130,10 @@ void test_josephson_tc0_required() {
     // Tc0 <= 0 should error
     std::vector<double> current(32);
     int rc = supermag_josephson_cpr(10.0, 5.0, 10.0, 4.0, 0.0, 0.0,
-                                    32, nullptr, current.data(), nullptr);
+                                    32, nullptr, nullptr, current.data(), nullptr);
     assert(rc != SUPERMAG_OK);
     rc = supermag_josephson_cpr(10.0, 5.0, 10.0, 4.0, -1.0, 0.0,
-                                32, nullptr, current.data(), nullptr);
+                                32, nullptr, nullptr, current.data(), nullptr);
     assert(rc != SUPERMAG_OK);
     std::printf("  PASS: test_josephson_tc0_required\n");
 }

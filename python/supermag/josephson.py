@@ -32,7 +32,8 @@ except ImportError:
     pass
 
 
-def current_phase_relation(d_F, xi_F, E_ex, T, n_phases=100, Tc0=9.2):
+def current_phase_relation(d_F, xi_F, E_ex, T, n_phases=100, Tc0=9.2,
+                           gamma_B=0.0):
     """
     Compute Josephson current-phase relation I(φ) for an S/F/S junction.
 
@@ -50,6 +51,8 @@ def current_phase_relation(d_F, xi_F, E_ex, T, n_phases=100, Tc0=9.2):
         Number of phase points from 0 to 2π.
     Tc0 : float, optional
         Bulk superconductor critical temperature (K). Default: 9.2 (Nb).
+    gamma_B : float, optional
+        Interface barrier parameter (dimensionless). Default: 0.0.
 
     Returns
     -------
@@ -59,7 +62,8 @@ def current_phase_relation(d_F, xi_F, E_ex, T, n_phases=100, Tc0=9.2):
         Supercurrent array (normalized to max |I|=1), shape (n_phases,).
     """
     if _USE_NATIVE:
-        return _native_josephson_cpr(d_F, xi_F, E_ex, T, Tc0, n_phases)
+        return _native_josephson_cpr(d_F, xi_F, E_ex, T, Tc0, n_phases,
+                                     gamma_B)
 
     # Pure Python fallback — Matsubara frequency sum for S/F/S CPR  [EQ-9]
     phi = np.linspace(0, 2 * np.pi, n_phases, endpoint=False)
@@ -101,8 +105,9 @@ def current_phase_relation(d_F, xi_F, E_ex, T, n_phases=100, Tc0=9.2):
         # Complex wave vector at this Matsubara frequency  [EQ-1 generalized]
         q_n = np.sqrt(2.0 * (omega_n / E_ex + 1.0j)) / xi_F
 
-        # F-layer propagator
-        P_n = np.exp(-q_n * d_F) * phase_rot
+        # F-layer propagator with barrier damping
+        barrier_damp = 1.0 / (1.0 + gamma_B * np.abs(q_n) * xi_F)
+        P_n = np.exp(-q_n * d_F) * phase_rot * barrier_damp
 
         # Denominator: √(ω_n² + Δ²·sin²(φ/2)) · √(ω_n² + Δ²)
         denom_phi = np.sqrt(omega_n2 + Delta2 * sin_half2)

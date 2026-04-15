@@ -23,11 +23,17 @@ typedef enum {
  * xi_F: short-range (ferromagnetic) coherence length (nm). If <= 0 uses 1.0.
  * xi_N: long-range (triplet) coherence length (nm).        If <= 0 uses 10.0.
  * T:    temperature (K), must be > 0.
- * mode: PHENOMENOLOGICAL or DIFFUSIVE. */
+ * Tc0:  bulk superconductor critical temperature (K), must be > 0.
+ * mode: PHENOMENOLOGICAL or DIFFUSIVE.
+ *
+ * Output units:
+ *   f_triplet_out: dimensionless triplet amplitude |f_1(x)| in [0, 1].
+ *   x_out:         position (nm) spanning [0, total_thickness]. */
 int supermag_triplet_solve(
     int n_layers, const double* thicknesses, const double* magnetization_angles,
     const double* E_ex_per_layer, const double* D_per_layer,
     double xi_F, double xi_N, double T,
+    double Tc0,
     supermag_triplet_mode_t mode,
     int n_grid, double* f_triplet_out, double* x_out
 );

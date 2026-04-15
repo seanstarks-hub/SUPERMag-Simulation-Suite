@@ -3,6 +3,31 @@
 All notable changes to SUPERMag are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/).
 
+## [0.2.1] — 2026-04-14
+
+### Added
+
+- **`supermag_solver_options_t`** — Composable options struct (`solver_options.h`) with `matsubara_max`, `omega_cut_factor`, `max_steps`, `max_iter`, `conv_tol`, `root_grid_points`. Pass NULL for defaults.
+- **Domain wall interpolation** — `kernel_domains` now supports finite-width domain walls via `domain_wall` field in `supermag_domain_params_t`. WALL_SLICES=10 with linear exchange-energy interpolation.
+- **`test_plotting.py`** — 10 new tests covering `plot_pair_amplitude()` and `plot_tc_vs_df()` (save_path, axes reuse, Tc0 reference line).
+
+### Changed
+
+- **Triplet Python API** — Added `T`, `Tc0`, `E_ex_per_layer`, `D_per_layer`, `mode` parameters. Input validation: `n_layers >= 2`, array length checks.
+- **Josephson Python API** — Added `gamma_B` parameter for interface barrier damping.
+- **Ginzburg-Landau Python API** — Added `H_applied`, `mode` ("scalar"/"gauge"), `seed` parameters. Input validation: `nx > 0`, `ny > 0`, `dx > 0`, `beta > 0`.
+- **BdG Python API** — Added input validation (`n_sites > 0`, `t_hop > 0`).
+- **C API signatures** — Usadel, Eilenberger, Josephson, GL now accept `const supermag_solver_options_t *opts`. Triplet signature reordered with `Tc0` added.
+- **OCaml FFI** — 5 new foreign declarations + wrapper functions for updated solver signatures.
+- **README.md** — Fixed `gamma=0.15` → `0.10`, corrected "usage" section heading.
+- **Default interface transparency** — `gamma` default changed from 0.15 to 0.10 across notebooks and examples.
+
+### Fixed
+
+- **Dead code removal** — Removed unused `_tridiag_solve()` from `usadel.py`.
+- **Notebook 02** (`02_parameter_sweep.ipynb`) — Fixed stale cell title.
+- **Documentation** — Removed stale "not yet exposed" C++ notes from josephson.md, ginzburg_landau.md, triplet.md. Updated all API docs to match current signatures.
+
 ## [0.2.0] — 2026-04-12
 
 ### Added

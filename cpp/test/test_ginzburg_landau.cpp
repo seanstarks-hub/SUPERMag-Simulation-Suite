@@ -14,7 +14,7 @@ void test_gl_uniform_equilibrium() {
 
     double alpha = -1.0, beta = 1.0, kappa = 1.0, dx = 0.5;
     int rc = supermag_gl_minimize(alpha, beta, kappa, nx, ny, dx,
-                                  SUPERMAG_GL_SCALAR, 0.0,
+                                  SUPERMAG_GL_SCALAR, 0.0, nullptr,
                                   psi_r.data(), psi_i.data());
     assert(rc == SUPERMAG_OK);
 
@@ -35,7 +35,7 @@ void test_gl_normal_state() {
 
     double alpha = 1.0, beta = 1.0, kappa = 1.0, dx = 0.5;
     int rc = supermag_gl_minimize(alpha, beta, kappa, nx, ny, dx,
-                                  SUPERMAG_GL_SCALAR, 0.0,
+                                  SUPERMAG_GL_SCALAR, 0.0, nullptr,
                                   psi_r.data(), psi_i.data());
     assert(rc == SUPERMAG_OK);
 
@@ -59,9 +59,9 @@ void test_gl_kappa_effect() {
     std::vector<double> psi_r2(N, 0.0), psi_i2(N, 0.0);
 
     supermag_gl_minimize(alpha, beta, 0.5, nx, ny, dx,
-                         SUPERMAG_GL_SCALAR, 0.0, psi_r1.data(), psi_i1.data());
+                         SUPERMAG_GL_SCALAR, 0.0, nullptr, psi_r1.data(), psi_i1.data());
     supermag_gl_minimize(alpha, beta, 2.0, nx, ny, dx,
-                         SUPERMAG_GL_SCALAR, 0.0, psi_r2.data(), psi_i2.data());
+                         SUPERMAG_GL_SCALAR, 0.0, nullptr, psi_r2.data(), psi_i2.data());
 
     // Both should converge to something non-trivial
     double sum1 = 0, sum2 = 0;
@@ -88,7 +88,7 @@ void test_gl_preserve_ic() {
 
     double alpha = -1.0, beta = 1.0, kappa = 1.0, dx = 0.5;
     int rc = supermag_gl_minimize(alpha, beta, kappa, nx, ny, dx,
-                                  SUPERMAG_GL_SCALAR, 0.0,
+                                  SUPERMAG_GL_SCALAR, 0.0, nullptr,
                                   psi_r.data(), psi_i.data());
     assert(rc == SUPERMAG_OK);
 
@@ -108,7 +108,7 @@ void test_gl_with_field() {
     double H = 0.1;
 
     int rc = supermag_gl_minimize(alpha, beta, kappa, nx, ny, dx,
-                                      SUPERMAG_GL_GAUGE, H,
+                                      SUPERMAG_GL_GAUGE, H, nullptr,
                                       psi_r.data(), psi_i.data());
     assert(rc == SUPERMAG_OK);
 
@@ -125,7 +125,7 @@ void test_gl_with_field() {
 
 void test_gl_null() {
     int rc = supermag_gl_minimize(-1.0, 1.0, 1.0, 10, 10, 0.5,
-                                  SUPERMAG_GL_SCALAR, 0.0, nullptr, nullptr);
+                                  SUPERMAG_GL_SCALAR, 0.0, nullptr, nullptr, nullptr);
     assert(rc == SUPERMAG_ERR_NULL_PTR);
     std::printf("  PASS: test_gl_null\n");
 }

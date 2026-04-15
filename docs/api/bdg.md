@@ -25,6 +25,13 @@ supermag.bdg.solve(n_sites, t_hop, Delta, E_ex, mu=0.0)
 | `E_ex` | float | *required* | Exchange splitting in ferromagnet region (meV) |
 | `mu` | float | `0.0` | Chemical potential (meV) |
 
+### Validation
+
+| Condition | Exception |
+|-----------|----------|
+| `n_sites` ≤ 0 | `ValueError` |
+| `t_hop` ≤ 0 | `ValueError` |
+
 ### Returns
 
 | Type | Description |

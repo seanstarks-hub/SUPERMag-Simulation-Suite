@@ -85,7 +85,7 @@ Tc = supermag.critical_temperature(
     Tc0=nb["Tc"], d_S=50.0,
     d_F_array=d_F, E_ex=fe["E_ex"],
     xi_S=nb["xi_S"], xi_F=fe["xi_F"],
-    gamma=0.15,
+    gamma=0.10,
 )
 
 plot_tc_vs_df(d_F, Tc, Tc0=nb["Tc"], save_path="tc_vs_df.png")
@@ -208,7 +208,7 @@ All solver modules have C++ implementations with pybind11 native dispatch and pu
 
 - macOS native C++ support and CI
 - Pre-built wheels for macOS (Intel + Apple Silicon)
-- GUI capabilities for least effort useage.
+- GUI capabilities for least effort usage.
 
 ## Contributing
 

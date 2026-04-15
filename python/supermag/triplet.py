@@ -34,7 +34,9 @@ except ImportError:
 
 
 def solve(n_layers, thicknesses, magnetization_angles, n_grid=200,
-          xi_F=1.0, xi_N=10.0):
+          xi_F=1.0, xi_N=10.0, T=4.2, Tc0=9.2,
+          E_ex_per_layer=None, D_per_layer=None,
+          mode="phenomenological"):
     """
     Compute spin-triplet pair correlations in a magnetic multilayer.
 
@@ -45,7 +47,7 @@ def solve(n_layers, thicknesses, magnetization_angles, n_grid=200,
     Parameters
     ----------
     n_layers : int
-        Number of layers.
+        Number of layers (must be >= 2).
     thicknesses : array_like
         Layer thicknesses (nm), shape (n_layers,).
     magnetization_angles : array_like
@@ -56,6 +58,18 @@ def solve(n_layers, thicknesses, magnetization_angles, n_grid=200,
         Short-range (ferromagnetic) coherence length (nm). Default: 1.0.
     xi_N : float, optional
         Long-range (triplet) coherence length (nm). Default: 10.0.
+    T : float, optional
+        Temperature (K). Default: 4.2.
+    Tc0 : float, optional
+        Bulk superconductor critical temperature (K). Default: 9.2 (Nb).
+    E_ex_per_layer : array_like or None, optional
+        Exchange energy per layer (meV), shape (n_layers,). If None, uses
+        global xi_F for all layers.
+    D_per_layer : array_like or None, optional
+        Diffusion constant per layer (nm²/meV), shape (n_layers,). If None,
+        uses global value.
+    mode : str, optional
+        Solver mode: "phenomenological" (default) or "diffusive".
 
     Returns
     -------
@@ -63,13 +77,39 @@ def solve(n_layers, thicknesses, magnetization_angles, n_grid=200,
         Position array (nm).
     f_triplet : numpy.ndarray
         Equal-spin triplet pair amplitude |f↑↑(x)|.
+
+    Raises
+    ------
+    ValueError
+        If n_layers < 2 or array lengths do not match n_layers.
     """
+    if n_layers < 2:
+        raise ValueError(f"n_layers must be >= 2, got {n_layers}")
+    thicknesses = np.asarray(thicknesses, dtype=np.float64)
+    magnetization_angles = np.asarray(magnetization_angles, dtype=np.float64)
+    if len(thicknesses) != n_layers:
+        raise ValueError(
+            f"thicknesses length {len(thicknesses)} != n_layers {n_layers}")
+    if len(magnetization_angles) != n_layers:
+        raise ValueError(
+            f"magnetization_angles length {len(magnetization_angles)} "
+            f"!= n_layers {n_layers}")
+
+    mode_map = {"phenomenological": 0, "diffusive": 1}
+    mode_int = mode_map.get(mode, 0) if isinstance(mode, str) else int(mode)
+
     if _USE_NATIVE:
         return _native_triplet_solve(
-            n_layers, np.ascontiguousarray(thicknesses, dtype=np.float64),
-            np.ascontiguousarray(magnetization_angles, dtype=np.float64),
-            xi_F, xi_N,
-            n_grid)
+            n_layers, np.ascontiguousarray(thicknesses),
+            np.ascontiguousarray(magnetization_angles),
+            xi_F, xi_N, n_grid, T, Tc0,
+            E_ex_per_layer=(
+                np.ascontiguousarray(E_ex_per_layer, dtype=np.float64)
+                if E_ex_per_layer is not None else None),
+            D_per_layer=(
+                np.ascontiguousarray(D_per_layer, dtype=np.float64)
+                if D_per_layer is not None else None),
+            mode=mode_int)
 
     # Pure Python fallback
     thicknesses = np.asarray(thicknesses, dtype=np.float64)

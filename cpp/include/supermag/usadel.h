@@ -2,6 +2,7 @@
 #define SUPERMAG_USADEL_H
 
 #include "error.h"
+#include "solver_options.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -18,12 +19,19 @@ typedef enum {
  * with Kupriyanov-Lukichev boundary conditions at S/F interfaces.
  *
  * T: temperature (K), must be > 0.
- * mode: LINEARIZED or NONLINEAR. */
+ * mode: LINEARIZED or NONLINEAR.
+ * opts: solver options (NULL = defaults). Uses: matsubara_max, omega_cut_factor,
+ *       max_iter, conv_tol.
+ *
+ * Output units:
+ *   Delta_out: superconducting gap Δ(x) (meV).
+ *   x_out:     position (nm) spanning [−d_S, d_F]. */
 int supermag_usadel_solve(
     double Tc0, double d_S, double d_F,
     double xi_S, double xi_F, double E_ex,
     double T,
     supermag_usadel_mode_t mode,
+    const supermag_solver_options_t *opts,
     int n_grid, double* Delta_out, double* x_out
 );
 

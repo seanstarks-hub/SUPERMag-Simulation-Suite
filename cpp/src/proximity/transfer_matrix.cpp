@@ -8,9 +8,6 @@
 
 namespace supermag {
 
-// Threshold matching kernels.cpp — beyond this, sinh/cosh overflow.
-static constexpr double OVERFLOW_THRESHOLD = 350.0;
-
 Matrix2x2 mat_identity() {
     Matrix2x2 I;
     I.m[0][0] = 1.0; I.m[0][1] = 0.0;
@@ -42,7 +39,7 @@ Matrix2x2 layer_transfer_matrix(std::complex<double> q, double delta) {
     double re = qd.real();
 
     std::complex<double> sh, ch;
-    if (std::abs(re) > OVERFLOW_THRESHOLD) {
+    if (std::abs(re) > SUPERMAG_OVERFLOW_THRESHOLD) {
         // Asymptotic: for large |Re(z)|,
         //   cosh(z) ≈ sinh(z) ≈ (sgn(Re(z))/2) * exp(|Re(z)|) * exp(i*Im(z))
         // The exponential factor cancels in ratios, so we track only the

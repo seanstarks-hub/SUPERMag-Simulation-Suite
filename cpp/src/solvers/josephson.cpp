@@ -4,6 +4,7 @@
 // Extended version supports interface barrier (gamma_B) and absolute Ic.
 
 #include "supermag/josephson.h"
+#include "supermag/solver_options.h"
 #include <cmath>
 #include <complex>
 #include <vector>
@@ -13,6 +14,7 @@ static int josephson_cpr_impl(
     double d_F, double xi_F, double E_ex, double T, double Tc0,
     double gamma_B,
     int n_phases, const double* phase_arr_in,
+    const supermag_solver_options_t *opts,
     double* current_out,
     double* Ic_out)
 {
@@ -50,8 +52,10 @@ static int josephson_cpr_impl(
     double barrier_damp = 1.0 / (1.0 + gamma_B);
 
     // Matsubara frequency sum for CPR  [EQ-9]
-    const int N_MAX = 500;
-    double omega_cut = 20.0 * Delta;
+    supermag_solver_options_t defaults = supermag_default_solver_options();
+    const supermag_solver_options_t *o = opts ? opts : &defaults;
+    const int N_MAX = o->matsubara_max;
+    double omega_cut = o->omega_cut_factor * Delta;
     std::complex<double> j_unit(0.0, 1.0);
     std::complex<double> phase_rot = std::exp(j_unit * pi / 4.0);
 
@@ -114,11 +118,12 @@ int supermag_josephson_cpr(
     double d_F, double xi_F, double E_ex, double T, double Tc0,
     double gamma_B,
     int n_phases, const double* phase_arr,
+    const supermag_solver_options_t *opts,
     double* current_out,
     double* Ic_out)
 {
     return josephson_cpr_impl(d_F, xi_F, E_ex, T, Tc0, gamma_B,
-                               n_phases, phase_arr,
+                               n_phases, phase_arr, opts,
                                current_out, Ic_out);
 }
 

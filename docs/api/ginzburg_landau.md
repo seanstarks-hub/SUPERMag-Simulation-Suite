@@ -4,8 +4,7 @@ Ginzburg-Landau free energy solver. Relaxes the TDGL equation on a 2D grid
 using double-buffered snapshot Euler integration.
 
 **C++ engine:** `ginzburg_landau.cpp` — supports scalar mode (no field) and
-gauge mode (Peierls phases with applied field $H$, EQ-18). The Python API
-currently exposes scalar mode only.
+gauge mode (Peierls phases with applied field $H$, EQ-18).
 
 ---
 
@@ -14,7 +13,10 @@ currently exposes scalar mode only.
 Minimize the Ginzburg-Landau free energy on a 2D grid.
 
 ```python
-supermag.ginzburg_landau.minimize(alpha, beta, kappa, nx, ny, dx)
+supermag.ginzburg_landau.minimize(
+    alpha, beta, kappa, nx, ny, dx,
+    H_applied=0.0, mode="scalar", seed=42
+)
 ```
 
 ### Parameters
@@ -27,6 +29,17 @@ supermag.ginzburg_landau.minimize(alpha, beta, kappa, nx, ny, dx)
 | `nx` | int | *required* | Grid width (number of columns) |
 | `ny` | int | *required* | Grid height (number of rows) |
 | `dx` | float | *required* | Grid spacing (nm) |
+| `H_applied` | float | `0.0` | External magnetic field (Tesla) |
+| `mode` | str | `"scalar"` | `"scalar"` (no vector potential) or `"gauge"` (includes A field via EQ-18). Python fallback raises `NotImplementedError` for gauge mode |
+| `seed` | int | `42` | Random seed for initial condition |
+
+### Validation
+
+| Condition | Exception |
+|-----------|----------|
+| `nx` ≤ 0 or `ny` ≤ 0 | `ValueError` |
+| `dx` ≤ 0 | `ValueError` |
+| `beta` ≤ 0 | `ValueError` |
 
 ### Returns
 
@@ -50,7 +63,8 @@ import supermag
 
 psi = supermag.ginzburg_landau.minimize(
     alpha=-1.0, beta=1.0, kappa=5.0,
-    nx=64, ny=64, dx=1.0
+    nx=64, ny=64, dx=1.0,
+    H_applied=0.1, mode="gauge"
 )
 # |psi|^2 ≈ 1.0 everywhere for uniform ground state
 print(f"Mean |ψ|² = {np.mean(np.abs(psi)**2):.3f}")

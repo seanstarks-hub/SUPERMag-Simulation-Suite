@@ -14,7 +14,7 @@ void test_usadel_bcs_limit() {
         9.2, 50.0, 0.01,  // Tc0, d_S, d_F (tiny F layer)
         38.0, 5.0, 10.0,  // xi_S, xi_F, E_ex
         4.0,               // T = 4K
-        SUPERMAG_USADEL_NONLINEAR,
+        SUPERMAG_USADEL_NONLINEAR, nullptr,
         n, Delta.data(), x.data());
     assert(rc == SUPERMAG_OK);
 
@@ -41,7 +41,7 @@ void test_usadel_convergence() {
         9.2, 50.0, 20.0,  // Tc0, d_S=50nm, d_F=20nm
         38.0, 5.0, 10.0,  // xi_S, xi_F, E_ex
         4.0,               // T
-        SUPERMAG_USADEL_NONLINEAR,
+        SUPERMAG_USADEL_NONLINEAR, nullptr,
         n, Delta.data(), x.data());
     assert(rc == SUPERMAG_OK);
 
@@ -64,10 +64,10 @@ void test_usadel_grid_independence() {
     std::vector<double> Delta1(n1), x1(n1), Delta2(n2), x2(n2);
 
     supermag_usadel_solve(9.2, 50.0, 20.0, 38.0, 5.0, 10.0, 4.0,
-                          SUPERMAG_USADEL_NONLINEAR,
+                          SUPERMAG_USADEL_NONLINEAR, nullptr,
                           n1, Delta1.data(), x1.data());
     supermag_usadel_solve(9.2, 50.0, 20.0, 38.0, 5.0, 10.0, 4.0,
-                          SUPERMAG_USADEL_NONLINEAR,
+                          SUPERMAG_USADEL_NONLINEAR, nullptr,
                           n2, Delta2.data(), x2.data());
 
     // Delta at x=0 (interface) should be similar between grids
@@ -89,7 +89,7 @@ void test_usadel_grid_independence() {
 
 void test_usadel_null() {
     int rc = supermag_usadel_solve(9.2, 50.0, 20.0, 38.0, 5.0, 10.0, 4.0,
-                                   SUPERMAG_USADEL_NONLINEAR,
+                                   SUPERMAG_USADEL_NONLINEAR, nullptr,
                                    100, nullptr, nullptr);
     assert(rc == SUPERMAG_ERR_NULL_PTR);
     std::printf("  PASS: test_usadel_null\n");
@@ -101,7 +101,7 @@ void test_usadel_proportional_grid() {
     std::vector<double> Delta(n), x(n);
     // d_S = 90nm, d_F = 10nm → n_S should be ~90
     int rc = supermag_usadel_solve(9.2, 90.0, 10.0, 38.0, 5.0, 10.0, 4.0,
-                                   SUPERMAG_USADEL_NONLINEAR,
+                                   SUPERMAG_USADEL_NONLINEAR, nullptr,
                                    n, Delta.data(), x.data());
     assert(rc == SUPERMAG_OK);
 

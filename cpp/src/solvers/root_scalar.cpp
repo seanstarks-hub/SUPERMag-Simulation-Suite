@@ -82,9 +82,10 @@ double root_scalar_solve(
     void *context,
     double T_min,
     double T_max,
-    double tol)
+    double tol,
+    int grid_points)
 {
-    const int N = 1000;
+    const int N = grid_points;
     double dT = (T_max - T_min) / N;
 
     // Evaluate on coarse grid
@@ -136,11 +137,12 @@ double root_scalar_solve_log(
     void *context,
     double T_min,
     double T_max,
-    double tol)
+    double tol,
+    int grid_points)
 {
     // Log-spaced grid gives much better resolution at low T.
     // At T=0.1 K with Tc0=9 K, spacing is ~0.001 K vs ~0.009 K for linear.
-    const int N = 1000;
+    const int N = grid_points;
     double log_min = std::log(T_min);
     double log_max = std::log(T_max);
     double d_log = (log_max - log_min) / N;

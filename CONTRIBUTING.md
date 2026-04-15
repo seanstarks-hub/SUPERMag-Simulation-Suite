@@ -45,6 +45,7 @@ python/supermag/        Python API (pybind11 bindings + pure-Python fallback)
   bdg.py … usadel.py    BdG, Eilenberger, GL, Josephson, triplet, Usadel
   _binding.cpp          pybind11 bridge (all solvers + depairing + optimizer)
 python/tests/           Python tests (pytest)
+  test_plotting.py      Plotting utility tests (10 tests)
 ocaml/                  Pipeline orchestration (dune)
 validation/             Comparison against published reference data
 docs/theory/            Jupyter notebooks with derivations
@@ -56,7 +57,7 @@ benchmarks/             Performance benchmarks
 
 | Command | What it runs |
 |---------|-------------|
-| `pytest python/tests/` | Python tests (proximity, solvers, sweeps, materials, themes, depairing) |
+| `pytest python/tests/` | Python tests (proximity, solvers, sweeps, materials, themes, depairing, plotting) |
 | `make test` | C++ unit tests via CMake (all 18 test suites) |
 | `make validate` | Validation suite against Buzdin (1982), Radovic (1991), Ryazanov (2003), Bergeret (2005) reference data |
 | `make bench` | Performance benchmarks |

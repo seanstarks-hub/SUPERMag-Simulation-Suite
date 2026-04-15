@@ -206,6 +206,7 @@ int supermag_proximity_kernel_graded(
 /* Parameters for alternating magnetic domains in the F layer */
 typedef struct {
     double domain_width;    /* Width of each domain (nm) */
+    double domain_wall;     /* Width of domain wall transition region (nm). 0 = sharp. */
 } supermag_domain_params_t;
 
 /**

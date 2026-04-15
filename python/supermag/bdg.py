@@ -50,7 +50,17 @@ def solve(n_sites, t_hop, Delta, E_ex, mu=0.0):
     -------
     eigenvalues : numpy.ndarray
         BdG eigenvalues (meV), sorted. Length 2*n_sites.
+
+    Raises
+    ------
+    ValueError
+        If n_sites <= 0 or t_hop <= 0.
     """
+    if n_sites <= 0:
+        raise ValueError(f"n_sites must be > 0, got {n_sites}")
+    if t_hop <= 0:
+        raise ValueError(f"t_hop must be > 0, got {t_hop}")
+
     if _USE_NATIVE:
         return _native_bdg_solve(n_sites, t_hop, Delta, E_ex, mu)
 

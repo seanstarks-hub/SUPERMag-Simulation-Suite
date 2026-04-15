@@ -55,9 +55,10 @@ def tc_parameter_sweep(sweep_var, sweep_values, d_F_array=None, **fixed_params):
           "Tc": np.ndarray}``
 
         * When *sweep_var* is ``"d_F"``, ``Tc`` has shape
-          ``(len(sweep_values),)`` — one value per thickness.
+          ``(len(sweep_values),)`` — one Tc per thickness.
         * Otherwise ``Tc`` has shape
-          ``(len(sweep_values), len(d_F_array))``.
+          ``(len(sweep_values), len(d_F_array))`` — a full
+          Tc(d_F) curve for each value of the swept parameter.
 
     Notes
     -----

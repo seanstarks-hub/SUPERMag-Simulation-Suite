@@ -33,24 +33,6 @@ except ImportError:
     pass
 
 
-def _tridiag_solve(a, b, c, d):
-    """Thomas algorithm for tridiagonal system Ax = d."""
-    n = len(d)
-    c_ = np.zeros(n, dtype=complex)
-    d_ = np.zeros(n, dtype=complex)
-    c_[0] = c[0] / b[0]
-    d_[0] = d[0] / b[0]
-    for i in range(1, n):
-        m = b[i] - a[i] * c_[i - 1]
-        c_[i] = c[i] / m
-        d_[i] = (d[i] - a[i] * d_[i - 1]) / m
-    x = np.zeros(n, dtype=complex)
-    x[-1] = d_[-1]
-    for i in range(n - 2, -1, -1):
-        x[i] = d_[i] - c_[i] * x[i + 1]
-    return x
-
-
 def solve(Tc0, d_S, d_F, xi_S, xi_F, E_ex, n_grid=200, T=None):
     """
     Solve the Usadel equation for an S/F bilayer.

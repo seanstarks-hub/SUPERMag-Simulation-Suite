@@ -14,7 +14,7 @@ void test_eilenberger_bulk_s() {
         9.2, 50.0, 0.01,  // Tc0, d_S, d_F (tiny F)
         38.0, 10.0,        // xi_S, E_ex
         4.0,               // T
-        n, f.data(), x.data());
+        nullptr, n, f.data(), x.data());
     assert(rc == SUPERMAG_OK);
 
     // f should be nonzero in S region (x < 0)
@@ -30,9 +30,9 @@ void test_eilenberger_frequency_convergence() {
     std::vector<double> f_low(n), x_low(n), f_high(n), x_high(n);
 
     supermag_eilenberger_solve(9.2, 50.0, 20.0, 38.0, 10.0, 2.0,
-                               n, f_low.data(), x_low.data());
+                               nullptr, n, f_low.data(), x_low.data());
     supermag_eilenberger_solve(9.2, 50.0, 20.0, 38.0, 10.0, 7.0,
-                               n, f_high.data(), x_high.data());
+                               nullptr, n, f_high.data(), x_high.data());
 
     // Both should give finite results
     assert(f_low[0] > 0.0);
@@ -54,7 +54,7 @@ void test_eilenberger_rk4_stability() {
         9.2, 50.0, 30.0,  // d_F = 30nm
         38.0, 100.0,       // Large E_ex = 100 meV
         4.0,
-        n, f.data(), x.data());
+        nullptr, n, f.data(), x.data());
     assert(rc == SUPERMAG_OK);
 
     // All values should be finite
@@ -67,7 +67,7 @@ void test_eilenberger_rk4_stability() {
 
 void test_eilenberger_null() {
     int rc = supermag_eilenberger_solve(9.2, 50.0, 20.0, 38.0, 10.0, 4.0,
-                                        100, nullptr, nullptr);
+                                        nullptr, 100, nullptr, nullptr);
     assert(rc == SUPERMAG_ERR_NULL_PTR);
     std::printf("  PASS: test_eilenberger_null\n");
 }

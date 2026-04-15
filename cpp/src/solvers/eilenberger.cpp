@@ -11,6 +11,7 @@
 // Total pair amplitude: f(x) = 2πT Σ_n Σ_θ w_θ |f_n|
 
 #include "supermag/eilenberger.h"
+#include "supermag/solver_options.h"
 #include <cmath>
 #include <complex>
 #include <algorithm>
@@ -30,6 +31,7 @@ int supermag_eilenberger_solve(
     double Tc0, double d_S, double d_F,
     double xi_S, double E_ex,
     double T,
+    const supermag_solver_options_t *opts,
     int n_grid, double* f_out, double* x_out)
 {
     if (!f_out || !x_out)
@@ -87,8 +89,10 @@ int supermag_eilenberger_solve(
 
     // Matsubara frequency sum  [2C-2]
     double T_meV = kB_meV * T_use;
-    const int N_FREQ_MAX = 500;
-    double omega_cut = 20.0 * std::max(Delta_T, 1e-6);
+    supermag_solver_options_t defaults = supermag_default_solver_options();
+    const supermag_solver_options_t *o = opts ? opts : &defaults;
+    const int N_FREQ_MAX = o->matsubara_max;
+    double omega_cut = o->omega_cut_factor * std::max(Delta_T, 1e-6);
 
     // Accumulate contributions from all frequencies
     std::vector<double> f_accum(n_grid, 0.0);

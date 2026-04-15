@@ -15,6 +15,7 @@
 //   ∇²A = -J
 
 #include "supermag/ginzburg_landau.h"
+#include "supermag/solver_options.h"
 #include <cmath>
 #include <cstdlib>
 #include <algorithm>
@@ -25,6 +26,7 @@ static int gl_minimize_impl(
     double alpha, double beta, double kappa,
     int nx, int ny, double dx,
     double H_applied,
+    const supermag_solver_options_t *opts,
     double* psi_real, double* psi_imag)
 {
     if (!psi_real || !psi_imag)
@@ -70,8 +72,10 @@ static int gl_minimize_impl(
     std::vector<double> Ay_update(N, 0.0);
 
     // Adaptive convergence  [2E-5]
-    const int max_steps = 5000;
-    const double conv_tol = 1e-8;
+    supermag_solver_options_t defaults = supermag_default_solver_options();
+    const supermag_solver_options_t *o = opts ? opts : &defaults;
+    const int max_steps = o->max_steps;
+    const double conv_tol = o->conv_tol;
     int converge_count = 0;
 
     // Double-buffer
@@ -204,10 +208,11 @@ int supermag_gl_minimize(
     double alpha, double beta, double kappa,
     int nx, int ny, double dx,
     supermag_gl_mode_t mode, double H_applied,
+    const supermag_solver_options_t *opts,
     double* psi_real, double* psi_imag)
 {
     double H = (mode == SUPERMAG_GL_GAUGE) ? H_applied : 0.0;
-    return gl_minimize_impl(alpha, beta, kappa, nx, ny, dx, H, psi_real, psi_imag);
+    return gl_minimize_impl(alpha, beta, kappa, nx, ny, dx, H, opts, psi_real, psi_imag);
 }
 
 }

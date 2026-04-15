@@ -16,7 +16,7 @@ void test_triplet_collinear() {
     std::vector<double> f(n_grid), x(n_grid);
     int rc = supermag_triplet_solve(n_layers, thick, angles,
                                     nullptr, nullptr,
-                                    1.0, 10.0, 4.0,
+                                    1.0, 10.0, 4.0, 9.2,
                                     SUPERMAG_TRIPLET_DIFFUSIVE,
                                     n_grid, f.data(), x.data());
     assert(rc == SUPERMAG_OK);
@@ -39,7 +39,7 @@ void test_triplet_perpendicular() {
     std::vector<double> f_perp(n_grid), x_perp(n_grid);
     int rc = supermag_triplet_solve(n_layers, thick, angles,
                                     nullptr, nullptr,
-                                    1.0, 10.0, 4.0,
+                                    1.0, 10.0, 4.0, 9.2,
                                     SUPERMAG_TRIPLET_DIFFUSIVE,
                                     n_grid, f_perp.data(), x_perp.data());
     assert(rc == SUPERMAG_OK);
@@ -55,7 +55,7 @@ void test_triplet_perpendicular() {
     std::vector<double> f_small(n_grid), x_small(n_grid);
     supermag_triplet_solve(n_layers, thick, angles_small,
                            nullptr, nullptr,
-                           1.0, 10.0, 4.0,
+                           1.0, 10.0, 4.0, 9.2,
                            SUPERMAG_TRIPLET_DIFFUSIVE,
                            n_grid, f_small.data(), x_small.data());
     double max_small = 0.0;
@@ -79,7 +79,7 @@ void test_triplet_decay_length() {
     double xi_N = 10.0;
     int rc = supermag_triplet_solve(n_layers, thick, angles,
                                     nullptr, nullptr,
-                                    1.0, xi_N, 4.0,
+                                    1.0, xi_N, 4.0, 9.2,
                                     SUPERMAG_TRIPLET_DIFFUSIVE,
                                     n_grid, f.data(), x.data());
     assert(rc == SUPERMAG_OK);
@@ -113,13 +113,13 @@ void test_triplet_xi_F_effect() {
     // Small xi_F → faster short-range decay
     supermag_triplet_solve(n_layers, thick, angles,
                            nullptr, nullptr,
-                           0.5, 10.0, 4.0,
+                           0.5, 10.0, 4.0, 9.2,
                            SUPERMAG_TRIPLET_DIFFUSIVE,
                            n_grid, f1.data(), x1.data());
     // Large xi_F → slower short-range decay
     supermag_triplet_solve(n_layers, thick, angles,
                            nullptr, nullptr,
-                           5.0, 10.0, 4.0,
+                           5.0, 10.0, 4.0, 9.2,
                            SUPERMAG_TRIPLET_DIFFUSIVE,
                            n_grid, f2.data(), x2.data());
 
@@ -144,12 +144,12 @@ void test_triplet_temperature() {
 
     supermag_triplet_solve(n_layers, thick, angles,
                                nullptr, nullptr,
-                               1.0, 10.0, 2.0,
+                               1.0, 10.0, 2.0, 9.2,
                                SUPERMAG_TRIPLET_DIFFUSIVE,
                                n_grid, f_low.data(), x_low.data());
     supermag_triplet_solve(n_layers, thick, angles,
                                nullptr, nullptr,
-                               1.0, 10.0, 8.0,
+                               1.0, 10.0, 8.0, 9.2,
                                SUPERMAG_TRIPLET_DIFFUSIVE,
                                n_grid, f_high.data(), x_high.data());
 
@@ -168,7 +168,7 @@ void test_triplet_temperature() {
 void test_triplet_null() {
     int rc = supermag_triplet_solve(2, nullptr, nullptr,
                                     nullptr, nullptr,
-                                    1.0, 10.0, 4.0,
+                                    1.0, 10.0, 4.0, 9.2,
                                     SUPERMAG_TRIPLET_DIFFUSIVE,
                                     100, nullptr, nullptr);
     assert(rc == SUPERMAG_ERR_NULL_PTR);

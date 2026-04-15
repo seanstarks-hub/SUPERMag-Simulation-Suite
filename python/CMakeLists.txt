@@ -16,6 +16,7 @@ add_library(supermag_core STATIC
     ${CPP_ROOT}/src/common/constants.cpp
     ${CPP_ROOT}/src/common/digamma.cpp
     ${CPP_ROOT}/src/common/allocator.cpp
+    ${CPP_ROOT}/src/common/solver_options.cpp
     ${CPP_ROOT}/src/proximity/pair_amplitude.cpp
     ${CPP_ROOT}/src/proximity/critical_temp.cpp
     ${CPP_ROOT}/src/proximity/kernels.cpp

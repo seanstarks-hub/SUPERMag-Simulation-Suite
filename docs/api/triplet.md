@@ -15,15 +15,12 @@ Compute spin-triplet pair correlations in a magnetic multilayer.
 ```python
 supermag.triplet.solve(
     n_layers, thicknesses, magnetization_angles,
-    n_grid=200, xi_F=1.0, xi_N=10.0
+    n_grid=200, xi_F=1.0, xi_N=10.0,
+    T=4.2, Tc0=9.2,
+    E_ex_per_layer=None, D_per_layer=None,
+    mode="phenomenological"
 )
 ```
-
-> **C++ note:** The C++ engine also supports temperature dependence (`T`),
-> per-layer exchange energies (`E_ex_per_layer`), per-layer diffusion
-> coefficients (`D_per_layer`), and a mode enum
-> (`PHENOMENOLOGICAL`/`DIFFUSIVE`). These are not yet exposed in the
-> Python API.
 
 ### Parameters
 
@@ -35,6 +32,19 @@ supermag.triplet.solve(
 | `n_grid` | int | `200` | Total spatial grid points |
 | `xi_F` | float | `1.0` | Short-range (ferromagnetic) coherence length (nm) |
 | `xi_N` | float | `10.0` | Long-range (triplet) coherence length (nm) |
+| `T` | float | `4.2` | Temperature (K) |
+| `Tc0` | float | `9.2` | Bulk superconductor critical temperature (K) |
+| `E_ex_per_layer` | array_like or None | `None` | Exchange energy per layer (meV), shape `(n_layers,)`. If `None`, uses global `xi_F` for all layers |
+| `D_per_layer` | array_like or None | `None` | Diffusion constant per layer (nm²/meV), shape `(n_layers,)`. If `None`, uses global value |
+| `mode` | str | `"phenomenological"` | `"phenomenological"` or `"diffusive"` |
+
+### Validation
+
+| Condition | Exception |
+|-----------|----------|
+| `n_layers` < 2 | `ValueError` |
+| `len(thicknesses)` ≠ `n_layers` | `ValueError` |
+| `len(magnetization_angles)` ≠ `n_layers` | `ValueError` |
 
 ### Returns
 
@@ -70,6 +80,8 @@ x, f_trip = supermag.triplet.solve(
     n_layers=3,
     thicknesses=[10.0, 5.0, 10.0],
     magnetization_angles=[0.0, np.pi/2, np.pi],
+    T=4.2, Tc0=9.2,
+    mode="diffusive"
     n_grid=300, xi_F=1.0, xi_N=10.0
 )
 # Peaks at interfaces where magnetization angle changes

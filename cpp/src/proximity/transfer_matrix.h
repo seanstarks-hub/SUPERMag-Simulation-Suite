@@ -20,6 +20,10 @@
 
 namespace supermag {
 
+// Shared overflow threshold: beyond |Re(q·δ)| > this, sinh/cosh overflow
+// double precision. coth(z) and tanh(z) → sgn(Re(z)) in this regime.
+static constexpr double SUPERMAG_OVERFLOW_THRESHOLD = 350.0;
+
 struct Matrix2x2 {
     std::complex<double> m[2][2];
 };

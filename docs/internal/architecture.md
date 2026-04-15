@@ -389,6 +389,12 @@ Josephson, `mu` added to BdG, `xi_F`/`xi_N` added to Triplet.
 - Added `spin_active` interface parameter to proximity params.
 - Kernel overflow threshold lowered from 350 to 3.0 for earlier asymptotic switch.
 
+**v0.4 changes:**
+- Added `supermag_solver_options_t` composable options struct (`solver_options.h`).
+- Usadel, Eilenberger, Josephson, GL signatures now accept `const supermag_solver_options_t *opts` (NULL = defaults).
+- Triplet signature reordered: `E_ex_per_layer`/`D_per_layer` before `xi_F`/`xi_N`; added `Tc0` parameter.
+- Domain wall interpolation (`WALL_SLICES=10`) for `kernel_domains`; `domain_wall` field added to `supermag_domain_params_t`.
+
 ```c
 /* error.h */
 const char* supermag_error_string(int code);
@@ -473,6 +479,18 @@ int supermag_fit_tc(
     int fit_gamma, int fit_gamma_B, int fit_E_ex, int fit_xi_F,
     double *chi2_out);
 
+/* solver_options.h */
+typedef struct {
+    int    matsubara_max;       /* Default: 500   */
+    double omega_cut_factor;    /* Default: 20.0  */
+    int    max_steps;           /* Default: 5000  */
+    int    max_iter;            /* Default: 100   */
+    double conv_tol;            /* Default: 1e-8  */
+    int    root_grid_points;    /* Default: 1000  */
+} supermag_solver_options_t;
+
+supermag_solver_options_t supermag_default_solver_options(void);
+
 /* usadel.h */
 typedef enum { SUPERMAG_USADEL_LINEARIZED=0, SUPERMAG_USADEL_NONLINEAR=1
              } supermag_usadel_mode_t;
@@ -480,7 +498,9 @@ typedef enum { SUPERMAG_USADEL_LINEARIZED=0, SUPERMAG_USADEL_NONLINEAR=1
 int supermag_usadel_solve(
     double Tc0, double d_S, double d_F,
     double xi_S, double xi_F, double E_ex,
-    double T, supermag_usadel_mode_t mode,
+    double T,
+    supermag_usadel_mode_t mode,
+    const supermag_solver_options_t *opts,
     int n_grid, double* Delta_out, double* x_out);
 
 /* eilenberger.h */
@@ -488,6 +508,7 @@ int supermag_eilenberger_solve(
     double Tc0, double d_S, double d_F,
     double xi_S, double E_ex,
     double T,
+    const supermag_solver_options_t *opts,
     int n_grid, double* f_out, double* x_out);
 
 /* bdg.h */
@@ -504,6 +525,7 @@ int supermag_gl_minimize(
     double alpha, double beta, double kappa,
     int nx, int ny, double dx,
     supermag_gl_mode_t mode, double H_applied,
+    const supermag_solver_options_t *opts,
     double* psi_real, double* psi_imag);
 
 /* josephson.h */
@@ -511,6 +533,7 @@ int supermag_josephson_cpr(
     double d_F, double xi_F, double E_ex, double T, double Tc0,
     double gamma_B,
     int n_phases, const double* phase_arr,
+    const supermag_solver_options_t *opts,
     double* current_out,
     double* Ic_out);
 
@@ -521,8 +544,9 @@ typedef enum { SUPERMAG_TRIPLET_PHENOMENOLOGICAL=0,
 int supermag_triplet_solve(
     int n_layers, const double* thicknesses,
     const double* magnetization_angles,
-    double xi_F, double xi_N, double T,
     const double* E_ex_per_layer, const double* D_per_layer,
+    double xi_F, double xi_N, double T,
+    double Tc0,
     supermag_triplet_mode_t mode,
     int n_grid, double* f_triplet_out, double* x_out);
 ```
@@ -557,10 +581,11 @@ conditions.
 cpp/include/supermag/
   proximity.h, usadel.h, eilenberger.h, bdg.h,
   ginzburg_landau.h, josephson.h, triplet.h,
-  error.h, constants.h
+  error.h, constants.h, solver_options.h
 
 cpp/src/common/
-  error.cpp, constants.cpp, digamma.cpp, digamma.h
+  error.cpp, constants.cpp, digamma.cpp, digamma.h,
+  solver_options.cpp
 
 cpp/src/proximity/
   kernels.cpp, critical_temp.cpp, pair_amplitude.cpp, depairing.cpp,
@@ -598,7 +623,8 @@ python/supermag/themes/
 
 python/tests/
   conftest.py, test_proximity.py, test_materials.py,
-  test_solvers.py, test_sweeps.py, test_themes.py, test_depairing.py
+  test_solvers.py, test_sweeps.py, test_themes.py, test_depairing.py,
+  test_plotting.py
 ```
 
 ### OCaml Orchestrator
@@ -738,10 +764,11 @@ are explicitly forbidden:
    conversions) to Python fallbacks unless they appear in the
    corresponding C++ implementation AND the EQ-* registry above.
 
-3. **Do not change C header signatures.** The `extern "C"` API in
-   `cpp/include/supermag/*.h` is frozen for ABI stability.
-   New `_ext` variants with additional parameters are permitted
-   alongside the original signatures.
+3. **Extend C header signatures with care.** The `extern "C"` API in
+   `cpp/include/supermag/*.h` should remain stable. New parameters
+   (e.g., `const supermag_solver_options_t *opts`) may be appended
+   when defaults preserve backward compatibility (NULL = legacy
+   behaviour). Document all signature changes in the §3 version log.
 
 4. **Do not duplicate solver logic.** If the Python fallback and C++
    engine implement the same formula, they must reference the same

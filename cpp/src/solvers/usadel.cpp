@@ -12,6 +12,7 @@
 // Yielding a tridiagonal system for δθ solved via Thomas algorithm.
 
 #include "supermag/usadel.h"
+#include "supermag/solver_options.h"
 #include <cmath>
 #include <complex>
 #include <algorithm>
@@ -29,6 +30,7 @@ int supermag_usadel_solve(
     double xi_S, double xi_F, double E_ex,
     double T,
     supermag_usadel_mode_t mode,
+    const supermag_solver_options_t *opts,
     int n_grid, double* Delta_out, double* x_out)
 {
     if (!Delta_out || !x_out)
@@ -90,8 +92,10 @@ int supermag_usadel_solve(
     double lambda_BCS = 0.3;
 
     // Self-consistency iterations  [2B-4]
-    const int max_iter = 100;
-    const double conv_tol = 1e-8;
+    supermag_solver_options_t defaults = supermag_default_solver_options();
+    const supermag_solver_options_t *o = opts ? opts : &defaults;
+    const int max_iter = o->max_iter;
+    const double conv_tol = o->conv_tol;
 
     // Working arrays
     std::vector<double> theta(n_grid, 0.0);
@@ -101,8 +105,8 @@ int supermag_usadel_solve(
         std::vector<double> F_sum(n_grid, 0.0);
 
         // Adaptive Matsubara cutoff  [2B-2]
-        const int N_MAX = 500;
-        double omega_cut = 20.0 * std::max(Delta_T, 1e-6);
+        const int N_MAX = o->matsubara_max;
+        double omega_cut = o->omega_cut_factor * std::max(Delta_T, 1e-6);
 
         for (int nm = 0; nm < N_MAX; ++nm) {
             double omega_n = pi * kB_meV * T_use * (2 * nm + 1);

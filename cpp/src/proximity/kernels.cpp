@@ -15,11 +15,12 @@
 
 #include <complex>
 #include <cmath>
+#include "transfer_matrix.h"
 
 namespace supermag {
 
-// Original overflow threshold (raw sinh/cosh overflow).
-static constexpr double OVERFLOW_THRESHOLD = 350.0;
+// Use shared overflow threshold from transfer_matrix.h
+static constexpr double OVERFLOW_THRESHOLD = SUPERMAG_OVERFLOW_THRESHOLD;
 
 // Tighter safe threshold: coth(z) − 1 ≈ 2·exp(−2Re(z)) < 2e-3 for Re(z) > 3.0.
 static constexpr double SAFE_THRESHOLD = 3.0;

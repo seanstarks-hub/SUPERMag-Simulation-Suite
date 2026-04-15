@@ -13,7 +13,11 @@ extern "C" {
  * mu: chemical potential (meV).  0.0 reproduces legacy behaviour.
  * eigenvectors_out: if non-NULL, filled with eigenvector matrix (dim×dim, row-major).
  *                   Must be preallocated to (2*n_sites)^2 doubles.
- *                   Pass NULL to skip eigenvector computation. */
+ *                   Pass NULL to skip eigenvector computation.
+ *
+ * Output units:
+ *   eigenvalues_out: Bogoliubov quasiparticle energies (meV), sorted ascending.
+ *   eigenvectors_out: column-major unitary matrix (dimensionless). */
 int supermag_bdg_solve(
     int n_sites, double t_hop, double Delta, double E_ex, double mu,
     double* eigenvalues_out, int* n_eigenvalues,

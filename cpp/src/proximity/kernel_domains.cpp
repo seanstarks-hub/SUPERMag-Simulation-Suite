@@ -44,6 +44,7 @@ int supermag_proximity_kernel_domains(
     int N = static_cast<int>(std::round(d_F / dom->domain_width));
     if (N < 1) N = 1;
     double d_dom = dom->domain_width;
+    double d_wall = (dom->domain_wall > 0.0) ? dom->domain_wall : 0.0;
 
     // Wave vectors for +E_ex and −E_ex domains
     // +E_ex: q = (1+i)/xi_F  (standard)
@@ -53,13 +54,6 @@ int supermag_proximity_kernel_domains(
     std::complex<double> q_minus(1.0, -1.0);
     q_minus /= xi_F;
 
-    // Effective domain thickness after accounting for walls
-    // Each wall occupies d_wall, and there are (N-1) walls between N domains.
-    // The domain thickness for propagation is d_dom minus the half-walls
-    // on each side. For simplicity, if d_wall > 0, we reduce each interior
-    // domain by d_wall (half from each side), and edge domains by d_wall/2.
-    // This is a geometric convention.
-
     // Build the total transfer matrix from vacuum (domain N) to S-side (domain 1).
     auto M_total = supermag::mat_identity();
 
@@ -68,10 +62,38 @@ int supermag_proximity_kernel_domains(
         bool positive = (i % 2 == 0);
         auto q_dom = positive ? q_plus : q_minus;
 
-        // Domain transfer matrix (sharp walls, no domain wall region)
-        if (d_dom > 0.0) {
-            auto M_dom = supermag::layer_transfer_matrix(q_dom, d_dom);
+        // Effective domain thickness: reduce by half-walls on each side
+        double d_eff = d_dom;
+        if (d_wall > 0.0 && N > 1) {
+            if (i == 0 || i == N - 1)
+                d_eff -= d_wall / 2.0;  // edge domain: one wall side
+            else
+                d_eff -= d_wall;        // interior domain: half-wall each side
+            if (d_eff < 0.0) d_eff = 0.0;
+        }
+
+        // Domain transfer matrix
+        if (d_eff > 0.0) {
+            auto M_dom = supermag::layer_transfer_matrix(q_dom, d_eff);
             M_total = supermag::mat_multiply(M_dom, M_total);
+        }
+
+        // Domain wall between domain i and domain i-1 (towards S-side)
+        // The wall interpolates E_ex linearly from one domain to the next.
+        if (d_wall > 0.0 && i > 0) {
+            bool next_positive = ((i - 1) % 2 == 0);
+            auto q_start = positive ? q_plus : q_minus;
+            auto q_end   = next_positive ? q_plus : q_minus;
+
+            double slice_thickness = d_wall / WALL_SLICES;
+            for (int s = 0; s < WALL_SLICES; ++s) {
+                // Interpolation parameter: 0 at domain i, 1 at domain i-1
+                double t = (s + 0.5) / WALL_SLICES;
+                // Linear interpolation of q between domains
+                auto q_wall = q_start * (1.0 - t) + q_end * t;
+                auto M_slice = supermag::layer_transfer_matrix(q_wall, slice_thickness);
+                M_total = supermag::mat_multiply(M_slice, M_total);
+            }
         }
     }
 
