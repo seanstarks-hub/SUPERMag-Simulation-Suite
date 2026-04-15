@@ -1,5 +1,18 @@
 (** Signature for FFI stubs — ctypes bindings to C++ solvers. *)
 
+(** Solver options for controlling numerical parameters. *)
+type solver_options = {
+  matsubara_max : int;
+  omega_cut_factor : float;
+  max_steps : int;
+  max_iter : int;
+  conv_tol : float;
+  root_grid_points : int;
+}
+
+(** Return default solver options matching C defaults. *)
+val default_solver_options : unit -> solver_options
+
 val supermag_const_hbar : unit -> float
 val supermag_const_kB : unit -> float
 
@@ -39,7 +52,7 @@ val solve_tc_batch :
 val usadel_solve :
   tc0:float -> d_s:float -> d_f:float ->
   xi_s:float -> xi_f:float -> e_ex:float ->
-  t:float -> mode:int -> n_grid:int -> float array * float array
+  t:float -> mode:int -> ?opts:solver_options -> n_grid:int -> float array * float array
 
 (** Eilenberger clean-limit solver.
     [t]: temperature (K), must be > 0.
@@ -47,7 +60,7 @@ val usadel_solve :
 val eilenberger_solve :
   tc0:float -> d_s:float -> d_f:float ->
   xi_s:float -> e_ex:float ->
-  t:float -> n_grid:int -> float array * float array
+  t:float -> ?opts:solver_options -> n_grid:int -> float array * float array
 
 (** BdG tight-binding Hamiltonian diagonalization.
     [mu]: chemical potential (meV); defaults to 0.0.
@@ -63,7 +76,7 @@ val bdg_solve :
 val gl_minimize :
   alpha:float -> beta:float -> kappa:float ->
   nx:int -> ny:int -> dx:float ->
-  mode:int -> h_applied:float ->
+  mode:int -> ?opts:solver_options -> h_applied:float ->
   float array * float array
 
 (** Josephson current-phase relation for S/F/S junctions.
@@ -72,7 +85,7 @@ val gl_minimize :
     Returns (phase_out, current_out) arrays of length [n_phases]. *)
 val josephson_cpr :
   d_f:float -> xi_f:float -> e_ex:float -> t:float ->
-  ?tc0:float -> gamma_b:float -> n_phases:int -> float array * float array
+  ?tc0:float -> gamma_b:float -> ?opts:solver_options -> n_phases:int -> float array * float array
 
 (** Spin-triplet superconductivity solver.
     [xi_f]: ferromagnetic coherence length (nm); defaults to 1.0.
@@ -84,7 +97,7 @@ val triplet_solve :
   n_layers:int -> thicknesses:float array ->
   magnetization_angles:float array ->
   ?xi_f:float -> ?xi_n:float ->
-  t:float -> mode:int ->
+  t:float -> ?tc0:float -> mode:int ->
   n_grid:int -> float array * float array
 
 (** Individual depairing channel: Abrikosov-Gor'kov *)

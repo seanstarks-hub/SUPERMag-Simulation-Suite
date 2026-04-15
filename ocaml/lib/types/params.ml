@@ -36,6 +36,7 @@ type graded_params = {
 
 type domain_params = {
   domain_width : float;  (** Magnetic domain width (nm) *)
+  domain_wall : float;   (** Domain wall thickness (nm), 0 = sharp *)
 }
 
 (** Spin-active interface parameters *)

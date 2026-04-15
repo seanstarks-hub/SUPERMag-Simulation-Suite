@@ -42,22 +42,22 @@ let pair_amplitude ~d_f ~xi_f ~phase ~n_points =
       Ok Result.{ x; values = f }
     with Failure msg -> Error msg
 
-let usadel ~tc0 ~d_s ~d_f ~xi_s ~xi_f ~e_ex ~t ~mode ~n_grid =
+let usadel ~tc0 ~d_s ~d_f ~xi_s ~xi_f ~e_ex ~t ~mode ?opts ~n_grid =
   if n_grid < 5 then Error "n_grid must be >= 5"
   else if t <= 0.0 then Error "t must be > 0"
   else
     try
       let (delta, x) = Stubs.usadel_solve ~tc0 ~d_s ~d_f ~xi_s ~xi_f ~e_ex
-          ~t ~mode:(Params.usadel_mode_to_int mode) ~n_grid in
+          ~t ~mode:(Params.usadel_mode_to_int mode) ?opts ~n_grid in
       Ok Result.{ x; values = delta }
     with Failure msg -> Error msg
 
-let eilenberger ~tc0 ~d_s ~d_f ~xi_s ~e_ex ~t ~n_grid =
+let eilenberger ~tc0 ~d_s ~d_f ~xi_s ~e_ex ~t ?opts ~n_grid =
   if n_grid < 5 then Error "n_grid must be >= 5"
   else if t <= 0.0 then Error "t must be > 0"
   else
     try
-      let (f, x) = Stubs.eilenberger_solve ~tc0 ~d_s ~d_f ~xi_s ~e_ex ~t ~n_grid in
+      let (f, x) = Stubs.eilenberger_solve ~tc0 ~d_s ~d_f ~xi_s ~e_ex ~t ?opts ~n_grid in
       Ok Result.{ x; values = f }
     with Failure msg -> Error msg
 
@@ -69,22 +69,22 @@ let bdg ~n_sites ~t_hop ~delta ~e_ex ?mu () =
       Ok Result.{ eigenvalues = eigs }
     with Failure msg -> Error msg
 
-let gl ~alpha ~beta ~kappa ~nx ~ny ~dx ~mode ~h_applied =
+let gl ~alpha ~beta ~kappa ~nx ~ny ~dx ~mode ?opts ~h_applied =
   if nx < 2 || ny < 2 then Error "nx and ny must be >= 2"
   else if dx <= 0.0 then Error "dx must be > 0"
   else
     try
       let (psi_r, psi_i) = Stubs.gl_minimize ~alpha ~beta ~kappa ~nx ~ny ~dx
-          ~mode:(Params.gl_mode_to_int mode) ~h_applied in
+          ~mode:(Params.gl_mode_to_int mode) ?opts ~h_applied in
       Ok Result.{ nx; ny; psi_real = psi_r; psi_imag = psi_i }
     with Failure msg -> Error msg
 
-let josephson ~d_f ~xi_f ~e_ex ~t ~gamma_b ~n_phases =
+let josephson ~d_f ~xi_f ~e_ex ~t ~gamma_b ?opts ~n_phases =
   if n_phases < 2 then Error "n_phases must be >= 2"
   else if d_f <= 0.0 then Error "d_f must be > 0"
   else
     try
-      let (phi, current) = Stubs.josephson_cpr ~d_f ~xi_f ~e_ex ~t ~gamma_b ~n_phases in
+      let (phi, current) = Stubs.josephson_cpr ~d_f ~xi_f ~e_ex ~t ~gamma_b ?opts ~n_phases in
       Ok Result.{ phi; current }
     with Failure msg -> Error msg
 

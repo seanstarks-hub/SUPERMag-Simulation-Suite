@@ -40,6 +40,23 @@ let dp_orbital    = field depairing_struct "orbital" double
 let dp_spin_orbit = field depairing_struct "spin_orbit" double
 let () = seal depairing_struct
 
+(* ── Solver options struct ────────────────────────────── *)
+
+type solver_options_t
+let solver_options_struct : solver_options_t structure typ =
+  structure "supermag_solver_options_t"
+let so_matsubara_max    = field solver_options_struct "matsubara_max" int
+let so_omega_cut_factor = field solver_options_struct "omega_cut_factor" double
+let so_max_steps        = field solver_options_struct "max_steps" int
+let so_max_iter         = field solver_options_struct "max_iter" int
+let so_conv_tol         = field solver_options_struct "conv_tol" double
+let so_root_grid_points = field solver_options_struct "root_grid_points" int
+let () = seal solver_options_struct
+
+let c_default_solver_options =
+  foreign "supermag_default_solver_options"
+    (void @-> returning solver_options_struct)
+
 (* ── Proximity params struct ─────────────────────────── *)
 
 type params_t
@@ -211,6 +228,35 @@ let make_depairing (ag, zeeman, orbital, spin_orbit) =
   setf dp dp_spin_orbit spin_orbit;
   dp
 
+type solver_options = {
+  matsubara_max : int;
+  omega_cut_factor : float;
+  max_steps : int;
+  max_iter : int;
+  conv_tol : float;
+  root_grid_points : int;
+}
+
+let default_solver_options () =
+  let s = c_default_solver_options () in
+  { matsubara_max = getf s so_matsubara_max;
+    omega_cut_factor = getf s so_omega_cut_factor;
+    max_steps = getf s so_max_steps;
+    max_iter = getf s so_max_iter;
+    conv_tol = getf s so_conv_tol;
+    root_grid_points = getf s so_root_grid_points;
+  }
+
+let solver_options_to_ptr opts =
+  let s = make solver_options_struct in
+  setf s so_matsubara_max opts.matsubara_max;
+  setf s so_omega_cut_factor opts.omega_cut_factor;
+  setf s so_max_steps opts.max_steps;
+  setf s so_max_iter opts.max_iter;
+  setf s so_conv_tol opts.conv_tol;
+  setf s so_root_grid_points opts.root_grid_points;
+  to_voidp (addr s)
+
 let solve_tc ~tc0 ~d_s ~d_f ~xi_s ~xi_f ~gamma ~gamma_b ~e_ex ~d_f_coeff
     ~d_s_coeff ~model ~phase ~geometry ~depairing =
   let p = make_params ~tc0 ~d_s ~d_f ~xi_s ~xi_f ~gamma ~gamma_b ~e_ex
@@ -235,20 +281,26 @@ let solve_tc_batch ~tc0 ~d_s ~xi_s ~xi_f ~gamma ~gamma_b ~e_ex ~d_f_coeff
   check_rc rc;
   carray_to_array n tc_out
 
-let usadel_solve ~tc0 ~d_s ~d_f ~xi_s ~xi_f ~e_ex ~t ~mode ~n_grid =
+let usadel_solve ~tc0 ~d_s ~d_f ~xi_s ~xi_f ~e_ex ~t ~mode ?opts ~n_grid =
   let delta_out = CArray.make double n_grid in
   let x_out = CArray.make double n_grid in
+  let opts_ptr = match opts with
+    | None -> from_voidp void null
+    | Some o -> solver_options_to_ptr o in
   let rc = c_usadel_solve tc0 d_s d_f xi_s xi_f e_ex t mode
-      (from_voidp void null) n_grid
+      opts_ptr n_grid
       (CArray.start delta_out) (CArray.start x_out) in
   check_rc rc;
   (carray_to_array n_grid delta_out, carray_to_array n_grid x_out)
 
-let eilenberger_solve ~tc0 ~d_s ~d_f ~xi_s ~e_ex ~t ~n_grid =
+let eilenberger_solve ~tc0 ~d_s ~d_f ~xi_s ~e_ex ~t ?opts ~n_grid =
   let f_out = CArray.make double n_grid in
   let x_out = CArray.make double n_grid in
+  let opts_ptr = match opts with
+    | None -> from_voidp void null
+    | Some o -> solver_options_to_ptr o in
   let rc = c_eilenberger_solve tc0 d_s d_f xi_s e_ex t
-      (from_voidp void null) n_grid
+      opts_ptr n_grid
       (CArray.start f_out) (CArray.start x_out) in
   check_rc rc;
   (carray_to_array n_grid f_out, carray_to_array n_grid x_out)
@@ -262,25 +314,31 @@ let bdg_solve ~n_sites ~t_hop ~delta ~e_ex ?(mu = 0.0) () =
   check_rc rc;
   carray_to_array (!@n_eig) eig_out
 
-let gl_minimize ~alpha ~beta ~kappa ~nx ~ny ~dx ~mode ~h_applied =
+let gl_minimize ~alpha ~beta ~kappa ~nx ~ny ~dx ~mode ?opts ~h_applied =
   let n = nx * ny in
   let psi_real = CArray.make double n in
   let psi_imag = CArray.make double n in
+  let opts_ptr = match opts with
+    | None -> from_voidp void null
+    | Some o -> solver_options_to_ptr o in
   let rc = c_gl_minimize alpha beta kappa nx ny dx mode h_applied
-      (from_voidp void null)
+      opts_ptr
       (CArray.start psi_real) (CArray.start psi_imag) in
   check_rc rc;
   (carray_to_array n psi_real, carray_to_array n psi_imag)
 
-let josephson_cpr ~d_f ~xi_f ~e_ex ~t ?(tc0 = 9.2) ~gamma_b ~n_phases =
+let josephson_cpr ~d_f ~xi_f ~e_ex ~t ?(tc0 = 9.2) ~gamma_b ?opts ~n_phases =
   let pi = Float.pi in
   let phase_arr = CArray.make double n_phases in
   for i = 0 to n_phases - 1 do
     CArray.set phase_arr i (2.0 *. pi *. Float.of_int i /. Float.of_int n_phases)
   done;
   let current_out = CArray.make double n_phases in
+  let opts_ptr = match opts with
+    | None -> from_voidp void null
+    | Some o -> solver_options_to_ptr o in
   let rc = c_josephson_cpr d_f xi_f e_ex t tc0 gamma_b n_phases
-      (CArray.start phase_arr) (from_voidp void null)
+      (CArray.start phase_arr) opts_ptr
       (CArray.start current_out)
       (from_voidp double null) in
   check_rc rc;
