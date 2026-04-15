@@ -49,8 +49,8 @@ let test_parse_whitespace () =
 (* ── resolve tests ───────────────────────────────────── *)
 
 let test_resolve_bilayer () =
-  let g = Geometry.bilayer ~s_thickness:30.0 ~s_material:"Nb"
-      ~f_thickness:8.0 ~f_material:"Fe" in
+  let g = Geometry.bilayer ~s_thickness:30.0 ~sc:Material.nb
+      ~f_thickness:8.0 ~fm:Material.fe in
   match Device.resolve g () with
   | Error e -> Alcotest.fail e
   | Ok p ->
@@ -78,9 +78,9 @@ let test_resolve_bilayer_from_parse () =
 let test_resolve_multi_f_error () =
   let g = Geometry.{
     layers = [
-      S_layer { thickness = 30.0; material = "Nb" };
-      F_layer { thickness = 5.0; material = "Fe" };
-      F_layer { thickness = 5.0; material = "Ni" };
+      S_layer { thickness = 30.0; sc = Material.nb };
+      F_layer { thickness = 5.0; fm = Material.fe };
+      F_layer { thickness = 5.0; fm = Material.ni };
     ];
     description = "S/F/F";
   } in
@@ -93,9 +93,9 @@ let test_resolve_multi_f_error () =
 let test_resolve_multi_f_with_domain_hint () =
   let g = Geometry.{
     layers = [
-      S_layer { thickness = 30.0; material = "Nb" };
-      F_layer { thickness = 5.0; material = "Fe" };
-      F_layer { thickness = 5.0; material = "Ni" };
+      S_layer { thickness = 30.0; sc = Material.nb };
+      F_layer { thickness = 5.0; fm = Material.fe };
+      F_layer { thickness = 5.0; fm = Material.ni };
     ];
     description = "S/F/F domains";
   } in
@@ -113,9 +113,9 @@ let test_resolve_multi_f_with_domain_hint () =
 let test_resolve_graded_requires_config () =
   let g = Geometry.{
     layers = [
-      S_layer { thickness = 30.0; material = "Nb" };
-      F_layer { thickness = 5.0; material = "Fe" };
-      F_layer { thickness = 5.0; material = "Ni" };
+      S_layer { thickness = 30.0; sc = Material.nb };
+      F_layer { thickness = 5.0; fm = Material.fe };
+      F_layer { thickness = 5.0; fm = Material.ni };
     ];
     description = "S/F/F";
   } in
@@ -126,7 +126,7 @@ let test_resolve_graded_requires_config () =
 
 let test_resolve_no_sc () =
   let g = Geometry.{
-    layers = [ F_layer { thickness = 5.0; material = "Fe" } ];
+    layers = [ F_layer { thickness = 5.0; fm = Material.fe } ];
     description = "F only";
   } in
   match Device.resolve g () with
@@ -135,7 +135,7 @@ let test_resolve_no_sc () =
 
 let test_resolve_no_fm () =
   let g = Geometry.{
-    layers = [ S_layer { thickness = 30.0; material = "Nb" } ];
+    layers = [ S_layer { thickness = 30.0; sc = Material.nb } ];
     description = "S only";
   } in
   match Device.resolve g () with

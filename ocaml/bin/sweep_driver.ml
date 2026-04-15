@@ -6,6 +6,8 @@
     Usage:
       supermag-sweep --solver proximity --param d_F --range 0.5,20.0,50 \
                      --sc Nb --fm Fe --output results.csv
+      supermag-sweep --stack "Nb:30/Fe:8" --param d_F --range 0.5,20,50
+      supermag-sweep --explore --param d_F --range 0.5,20,50 --format csv
       supermag-sweep --validate buzdin_1982 *)
 
 open Cmdliner
@@ -92,55 +94,111 @@ let parse_depairing s =
       with _ -> Error (`Msg (Printf.sprintf "bad --depairing format: %s" s)))
     | _ -> Error (`Msg (Printf.sprintf "--depairing must be 6 comma-separated values: %s" s))
 
+(* ── Explore output ──────────────────────────────────── *)
+
+let output_explore_csv oc (result : Result.exploration_result) =
+  Printf.fprintf oc "# SUPERMag exploration: %d stacks evaluated\n"
+    result.total_evaluated;
+  Printf.fprintf oc "rank,description,tc_min_K,d_f_at_min_nm\n";
+  List.iteri (fun i dr ->
+    Printf.fprintf oc "%d,%s,%.6f,%.6f\n"
+      (i + 1) dr.Result.description dr.tc_min dr.d_f_at_min
+  ) result.ranked
+
+let output_explore_json oc (result : Result.exploration_result) =
+  Printf.fprintf oc "{\n";
+  Printf.fprintf oc "  \"total_evaluated\": %d,\n" result.total_evaluated;
+  Printf.fprintf oc "  \"ranked\": [\n";
+  let n = List.length result.ranked in
+  List.iteri (fun i dr ->
+    let comma = if i < n - 1 then "," else "" in
+    Printf.fprintf oc
+      "    {\"rank\": %d, \"description\": \"%s\", \"tc_min_K\": %.6f, \"d_f_at_min_nm\": %.6f}%s\n"
+      (i + 1) dr.Result.description dr.tc_min dr.d_f_at_min comma
+  ) result.ranked;
+  Printf.fprintf oc "  ]\n}\n"
+
 (* ── Main sweep command ──────────────────────────────── *)
 
 let run_sweep param_str range_str sc fm model phase
     gamma gamma_b format_str output_file d_f_range_str d_s_opt geom_str
-    depairing_str =
+    depairing_str stack_opt explore_flag =
   match Sweep.sweep_param_of_string param_str with
   | Error msg -> Printf.eprintf "Error: %s\n" msg; 1
-  | Ok param ->
+  | Ok sweep_param ->
     match parse_range range_str with
     | Error (`Msg msg) -> Printf.eprintf "Error: %s\n" msg; 1
     | Ok (lo, hi, n) ->
-      match build_params sc fm model phase gamma gamma_b d_s_opt geom_str with
-      | Error msg -> Printf.eprintf "Error: %s\n" msg; 1
-      | Ok params ->
-        match parse_depairing depairing_str with
-        | Error (`Msg msg) -> Printf.eprintf "Error: %s\n" msg; 1
-        | Ok depairing ->
-        let sweep_values = Sweep.grid_sweep Sweep.{
-          param_name = param_str; min_val = lo; max_val = hi;
-          n_points = n; sweep_type = Grid;
-        } in
-        let d_f_array = match d_f_range_str with
-          | "" -> [|1.0|]
-          | s ->
-            match parse_range s with
-            | Ok (lo, hi, n) ->
-              Sweep.grid_sweep Sweep.{
-                param_name = "d_F"; min_val = lo; max_val = hi;
-                n_points = n; sweep_type = Grid;
-              }
-            | Error _ -> [|1.0|]
+      let d_f_array = Sweep.grid_sweep Sweep.{
+        param_name = "d_F"; min_val = lo; max_val = hi;
+        n_points = n; sweep_type = Grid;
+      } in
+      match parse_depairing depairing_str with
+      | Error (`Msg msg) -> Printf.eprintf "Error: %s\n" msg; 1
+      | Ok depairing ->
+        let oc = match output_file with
+          | "" -> stdout
+          | path -> open_out path
         in
-        match Sweep.tc_parameter_sweep param sweep_values
-            ~params ~d_f_array ~depairing () with
-        | Error msg -> Printf.eprintf "Solver error: %s\n" msg; 1
-        | Ok result ->
-          let oc = match output_file with
-            | "" -> stdout
-            | path -> open_out path
+        let close_oc () = if output_file <> "" then close_out oc in
+        if explore_flag then begin
+          (* --explore: combinatorial SC×FM sweep *)
+          let stacks = Design.enumerate_bilayers
+            ~sc:Material.all_superconductors
+            ~fm:Material.all_ferromagnets
+            ~d_s:38.0 ~d_f:lo
           in
-          let param_name = Sweep.sweep_param_to_string param in
+          let result = Design.explore ~stacks ~d_f_array ~depairing () in
           if format_str = "json" then
-            output_json oc param_name result.tc0
-              result.d_f_values result.tc_values
+            output_explore_json oc result
           else
-            output_csv oc param_name result.tc0
-              result.d_f_values result.tc_values;
-          if output_file <> "" then close_out oc;
-          0
+            output_explore_csv oc result;
+          close_oc (); 0
+        end else begin
+          (* Resolve params: --stack takes priority over --sc/--fm *)
+          let params_result = match stack_opt with
+            | Some s ->
+              (match Device.parse_stack s with
+               | Error e -> Error e
+               | Ok geom ->
+                 match Device.resolve geom () with
+                 | Error e -> Error e
+                 | Ok p -> Ok Params.{ p with gamma; gamma_b })
+            | None ->
+              build_params sc fm model phase gamma gamma_b d_s_opt geom_str
+          in
+          match params_result with
+          | Error msg -> Printf.eprintf "Error: %s\n" msg; 1
+          | Ok params ->
+            let param = sweep_param in
+            let sweep_values = Sweep.grid_sweep Sweep.{
+              param_name = param_str; min_val = lo; max_val = hi;
+              n_points = n; sweep_type = Grid;
+            } in
+            let d_f_arr = match d_f_range_str with
+              | "" -> [|1.0|]
+              | s ->
+                match parse_range s with
+                | Ok (lo2, hi2, n2) ->
+                  Sweep.grid_sweep Sweep.{
+                    param_name = "d_F"; min_val = lo2; max_val = hi2;
+                    n_points = n2; sweep_type = Grid;
+                  }
+                | Error _ -> [|1.0|]
+            in
+            match Sweep.tc_parameter_sweep param sweep_values
+                ~params ~d_f_array:d_f_arr ~depairing () with
+            | Error msg -> Printf.eprintf "Solver error: %s\n" msg; 1
+            | Ok result ->
+              let param_name = Sweep.sweep_param_to_string param in
+              if format_str = "json" then
+                output_json oc param_name result.tc0
+                  result.d_f_values result.tc_values
+              else
+                output_csv oc param_name result.tc0
+                  result.d_f_values result.tc_values;
+              close_oc (); 0
+        end
 
 (* ── Cmdliner terms ──────────────────────────────────── *)
 
@@ -201,12 +259,20 @@ let depairing_t =
              If omitted, no depairing is applied." in
   Arg.(value & opt string "" & info ["depairing"] ~doc ~docv:"DEPAIRING")
 
+let stack_t =
+  let doc = "Device stack in Nb:30/Fe:8 notation. Takes priority over --sc/--fm if supplied." in
+  Arg.(value & opt (some string) None & info ["stack"] ~doc ~docv:"STACK")
+
+let explore_t =
+  let doc = "Run combinatorial SC×FM exploration over all material combinations." in
+  Arg.(value & flag & info ["explore"] ~doc)
+
 let sweep_cmd =
   let doc = "SUPERMag parameter sweep driver" in
   let info = Cmd.info "supermag-sweep" ~doc in
   Cmd.v info
     Term.(const run_sweep $ param_t $ range_t $ sc_t $ fm_t $ model_t $ phase_t
           $ gamma_t $ gamma_b_t $ format_t $ output_t $ d_f_range_t $ d_s_t
-          $ geometry_t $ depairing_t)
+          $ geometry_t $ depairing_t $ stack_t $ explore_t)
 
 let () = exit (Cmd.eval sweep_cmd)
