@@ -3,6 +3,27 @@
 All notable changes to SUPERMag are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/).
 
+## [0.3.0] — 2026-04-14
+
+### Added
+
+- **`device.ml`** — Layer-stack parser and resolver. `parse_stack "Nb:50/Fe:10"` extracts typed geometry; `resolve` maps bilayer/trilayer/graded/domains stacks to `proximity_params`, auto-detecting bilayer (S/F) and trilayer (S/N/F). Graded and domain geometries require explicit `geometry_hint` + `geom_config`.
+- **`design.ml`** — Combinatorial bilayer design explorer. `enumerate_bilayers` runs SC×FM Cartesian product (3×6 = 18 combos) with parallel `Domain.spawn`, returning `design_result` records with material names and `tc_result`. `filter` applies `tc_min`/`tc_max`/`max_d_total` constraints. `to_csv`/`to_json` output formatters.
+- **CLI `--stack` flag** — Device stack notation (`--stack "Nb:50/Fe:10"`) on `sweep_driver.ml`. Parses via `Device.parse_stack`, resolves via `Device.resolve`. Takes priority over `--sc`/`--fm`.
+- **CLI `--explore` flag** — Combinatorial exploration mode on `sweep_driver.ml`. Enumerates all SC×FM bilayers over `--range` as d_F array, applies constraint filters (`--tc-min`, `--tc-max`, `--max-d-total`), outputs CSV or JSON.
+- **CLI `--domain-width`, `--domain-wall`** — Domain geometry configuration flags forwarded to `Device.resolve`.
+- **`test_device.ml`** — 14 Alcotest cases for `parse_stack` and `resolve` (bilayer, trilayer, graded, domains, error paths).
+- **`test_design.ml`** — 5 Alcotest cases for `enumerate_bilayers` and `filter` (full count, subset, tc_min, empty, no constraints).
+
+### Changed
+
+- **OCaml `params.ml`** — Added `domain_wall` field to `domain_params` (aligns with C `supermag_domain_params_t.domain_wall`).
+- **OCaml `stubs.ml`** — Added `solver_options_struct` ctypes binding with 6 fields matching `supermag_solver_options_t`.
+- **OCaml `stubs.mli`** — Added `?tc0:float` to triplet signature; exposed `solver_options` type.
+- **OCaml `solvers.ml`** — Added optional `?opts` parameter to usadel, eilenberger, josephson, and GL wrappers.
+- **OCaml `sweep_driver.ml`** — Refactored to 21 parameters with dual-mode (explore vs sweep). `--param` changed from required to optional (default `d_F`). Added `build_params_from_stack` helper.
+- **`architecture.md`** — Updated §1 layer diagram and §5 file locations with `device.ml`, `design.ml`, `test_device.ml`, `test_design.ml`.
+
 ## [0.2.1] — 2026-04-14
 
 ### Added

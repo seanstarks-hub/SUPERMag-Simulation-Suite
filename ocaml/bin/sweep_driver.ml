@@ -94,21 +94,71 @@ let parse_depairing s =
 
 (* ── Main sweep command ──────────────────────────────── *)
 
+(** Build params from --stack notation, falling back to --sc/--fm lookup. *)
+let build_params_from_stack stack_str sc fm model phase gamma gamma_b
+    d_s_opt geom_str domain_width domain_wall =
+  if stack_str <> "" then
+    begin match Device.parse_stack stack_str with
+    | Error msg -> Error msg
+    | Ok geom ->
+      let geometry_hint = match Params.geometry_of_string geom_str with
+        | Ok g -> Some g | Error _ -> None in
+      let geom_config = match geometry_hint with
+        | Some Params.Domains ->
+          Some (Params.Domain_config {
+            domain_width = (match domain_width with Some w -> w | None -> 10.0);
+            domain_wall;
+          })
+        | _ -> None in
+      Device.resolve geom ?geometry_hint ?geom_config ()
+    end
+  else
+    build_params sc fm model phase gamma gamma_b d_s_opt geom_str
+
 let run_sweep param_str range_str sc fm model phase
     gamma gamma_b format_str output_file d_f_range_str d_s_opt geom_str
-    depairing_str =
-  match Sweep.sweep_param_of_string param_str with
-  | Error msg -> Printf.eprintf "Error: %s\n" msg; 1
-  | Ok param ->
-    match parse_range range_str with
+    depairing_str stack_str domain_width domain_wall
+    explore tc_min tc_max max_d_total =
+  match parse_range range_str with
+  | Error (`Msg msg) -> Printf.eprintf "Error: %s\n" msg; 1
+  | Ok (lo, hi, n) ->
+    match parse_depairing depairing_str with
     | Error (`Msg msg) -> Printf.eprintf "Error: %s\n" msg; 1
-    | Ok (lo, hi, n) ->
-      match build_params sc fm model phase gamma gamma_b d_s_opt geom_str with
+    | Ok depairing ->
+    let oc = match output_file with
+      | "" -> stdout
+      | path -> open_out path
+    in
+    if explore then begin
+      (* ── Combinatorial exploration mode ──────────── *)
+      let d_f_array = Sweep.grid_sweep Sweep.{
+        param_name = "d_F"; min_val = lo; max_val = hi;
+        n_points = n; sweep_type = Grid;
+      } in
+      let d_s = match d_s_opt with Some v -> v | None -> 50.0 in
+      let results = Design.enumerate_bilayers
+          ~sc:Material.all_superconductors
+          ~fm:Material.all_ferromagnets
+          ~d_s ~d_f_array ~depairing () in
+      let constraint_ = Design.{
+        tc_min; tc_max; max_d_total;
+      } in
+      let filtered = Design.filter constraint_ results in
+      if format_str = "json" then
+        Design.to_json oc filtered
+      else
+        Design.to_csv oc filtered;
+      if output_file <> "" then close_out oc;
+      0
+    end else begin
+      (* ── Single-stack sweep mode ─────────────────── *)
+      match Sweep.sweep_param_of_string param_str with
       | Error msg -> Printf.eprintf "Error: %s\n" msg; 1
-      | Ok params ->
-        match parse_depairing depairing_str with
-        | Error (`Msg msg) -> Printf.eprintf "Error: %s\n" msg; 1
-        | Ok depairing ->
+      | Ok param ->
+        begin match build_params_from_stack stack_str sc fm model phase
+              gamma gamma_b d_s_opt geom_str domain_width domain_wall with
+        | Error msg -> Printf.eprintf "Error: %s\n" msg; 1
+        | Ok params ->
         let sweep_values = Sweep.grid_sweep Sweep.{
           param_name = param_str; min_val = lo; max_val = hi;
           n_points = n; sweep_type = Grid;
@@ -116,22 +166,19 @@ let run_sweep param_str range_str sc fm model phase
         let d_f_array = match d_f_range_str with
           | "" -> [|1.0|]
           | s ->
-            match parse_range s with
+            begin match parse_range s with
             | Ok (lo, hi, n) ->
               Sweep.grid_sweep Sweep.{
                 param_name = "d_F"; min_val = lo; max_val = hi;
                 n_points = n; sweep_type = Grid;
               }
             | Error _ -> [|1.0|]
+            end
         in
-        match Sweep.tc_parameter_sweep param sweep_values
+        begin match Sweep.tc_parameter_sweep param sweep_values
             ~params ~d_f_array ~depairing () with
         | Error msg -> Printf.eprintf "Solver error: %s\n" msg; 1
         | Ok result ->
-          let oc = match output_file with
-            | "" -> stdout
-            | path -> open_out path
-          in
           let param_name = Sweep.sweep_param_to_string param in
           if format_str = "json" then
             output_json oc param_name result.tc0
@@ -141,12 +188,15 @@ let run_sweep param_str range_str sc fm model phase
               result.d_f_values result.tc_values;
           if output_file <> "" then close_out oc;
           0
+        end
+        end
+    end
 
 (* ── Cmdliner terms ──────────────────────────────────── *)
 
 let param_t =
   let doc = "Parameter to sweep: d_F, d_S, D_S, gamma, gamma_B, E_ex, xi_F, Tc0" in
-  Arg.(required & opt (some string) None & info ["param"; "p"] ~doc ~docv:"PARAM")
+  Arg.(value & opt string "d_F" & info ["param"; "p"] ~doc ~docv:"PARAM")
 
 let range_t =
   let doc = "Sweep range as min,max,n_points" in
@@ -201,12 +251,42 @@ let depairing_t =
              If omitted, no depairing is applied." in
   Arg.(value & opt string "" & info ["depairing"] ~doc ~docv:"DEPAIRING")
 
+let stack_t =
+  let doc = "Device stack notation, e.g. Nb:50/Fe:10. \
+             Takes priority over --sc/--fm when provided." in
+  Arg.(value & opt string "" & info ["stack"] ~doc ~docv:"STACK")
+
+let domain_width_t =
+  let doc = "Domain width (nm) for domain geometry." in
+  Arg.(value & opt (some float) None & info ["domain-width"] ~doc ~docv:"WIDTH")
+
+let domain_wall_t =
+  let doc = "Domain wall thickness (nm). Default: 0 (sharp)." in
+  Arg.(value & opt float 0.0 & info ["domain-wall"] ~doc ~docv:"WALL")
+
+let explore_t =
+  let doc = "Combinatorial exploration: enumerate all SC×FM bilayers." in
+  Arg.(value & flag & info ["explore"] ~doc)
+
+let tc_min_t =
+  let doc = "Minimum Tc (K) constraint for --explore filtering." in
+  Arg.(value & opt (some float) None & info ["tc-min"] ~doc ~docv:"TC_MIN")
+
+let tc_max_t =
+  let doc = "Maximum Tc (K) constraint for --explore filtering." in
+  Arg.(value & opt (some float) None & info ["tc-max"] ~doc ~docv:"TC_MAX")
+
+let max_d_total_t =
+  let doc = "Maximum total thickness d_S+d_F (nm) constraint for --explore." in
+  Arg.(value & opt (some float) None & info ["max-d-total"] ~doc ~docv:"D_TOTAL")
+
 let sweep_cmd =
   let doc = "SUPERMag parameter sweep driver" in
   let info = Cmd.info "supermag-sweep" ~doc in
   Cmd.v info
     Term.(const run_sweep $ param_t $ range_t $ sc_t $ fm_t $ model_t $ phase_t
           $ gamma_t $ gamma_b_t $ format_t $ output_t $ d_f_range_t $ d_s_t
-          $ geometry_t $ depairing_t)
+          $ geometry_t $ depairing_t $ stack_t $ domain_width_t $ domain_wall_t
+          $ explore_t $ tc_min_t $ tc_max_t $ max_d_total_t)
 
 let () = exit (Cmd.eval sweep_cmd)

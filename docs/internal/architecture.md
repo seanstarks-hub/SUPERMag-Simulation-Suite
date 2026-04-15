@@ -71,8 +71,10 @@
 │  OCaml Orchestrator ocaml/lib/**/  ocaml/bin/            │
 │    FFI stubs:       ocaml/lib/ffi/stubs.ml{i} (18 C fn) │
 │    Typed solvers:   ocaml/lib/ffi/solvers.ml             │
-│    Pipeline:        ocaml/lib/pipeline/sweep.ml,chain.ml │
+│    Pipeline:        ocaml/lib/pipeline/sweep.ml,chain.ml,│
+│                     device.ml, design.ml                 │
 │    CLI driver:      ocaml/bin/sweep_driver.ml            │
+│                     (--stack, --explore flags)            │
 └─────────────────────────────────────────────────────────┘
 ```
 
@@ -630,10 +632,11 @@ python/tests/
 ### OCaml Orchestrator
 ```
 ocaml/lib/ffi/       stubs.ml, stubs.mli, solvers.ml
-ocaml/lib/pipeline/  sweep.ml, chain.ml
+ocaml/lib/pipeline/  sweep.ml, chain.ml, device.ml, design.ml
 ocaml/lib/types/     params.ml, material.ml, result.ml, geometry.ml
 ocaml/bin/           sweep_driver.ml
-ocaml/test/          test_ffi.ml, test_chain.ml, test_sweep.ml
+ocaml/test/          test_ffi.ml, test_chain.ml, test_sweep.ml,
+                     test_device.ml, test_design.ml
 ```
 
 ### Build & CI

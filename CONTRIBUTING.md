@@ -47,6 +47,11 @@ python/supermag/        Python API (pybind11 bindings + pure-Python fallback)
 python/tests/           Python tests (pytest)
   test_plotting.py      Plotting utility tests (10 tests)
 ocaml/                  Pipeline orchestration (dune)
+  lib/types/            Material database, geometry, params, result types
+  lib/ffi/              Ctypes FFI stubs + typed solver wrappers
+  lib/pipeline/         sweep.ml, chain.ml, device.ml, design.ml
+  bin/                  sweep_driver.ml CLI (--stack, --explore)
+  test/                 Alcotest suites (ffi, chain, sweep, device, design)
 validation/             Comparison against published reference data
 docs/theory/            Jupyter notebooks with derivations
 docs/tutorials/         Usage tutorial notebooks
