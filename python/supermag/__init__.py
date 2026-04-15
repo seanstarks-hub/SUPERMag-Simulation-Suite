@@ -29,6 +29,7 @@ from supermag.depairing import (
     depairing_soc, depairing_from_physical,
     optimize_tc, inverse_tc, fit_tc,
 )
+from supermag.optimizer import optimize_design, sensitivity_at, robust_optimize
 
 # Solver modules — import submodules for convenient access
 from supermag import bdg

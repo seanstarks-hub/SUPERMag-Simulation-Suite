@@ -72,9 +72,9 @@
 │    FFI stubs:       ocaml/lib/ffi/stubs.ml{i} (18 C fn) │
 │    Typed solvers:   ocaml/lib/ffi/solvers.ml             │
 │    Pipeline:        ocaml/lib/pipeline/sweep.ml,chain.ml,│
-│                     device.ml, design.ml                 │
+│                     device.ml, design.ml, optimize.ml    │
 │    CLI driver:      ocaml/bin/sweep_driver.ml            │
-│                     (--stack, --explore flags)            │
+│                     (--stack, --explore, --optimize)      │
 └─────────────────────────────────────────────────────────┘
 ```
 
@@ -618,7 +618,7 @@ cpp/test/
 python/supermag/
   __init__.py, proximity.py, depairing.py, usadel.py, eilenberger.py,
   bdg.py, ginzburg_landau.py, josephson.py, triplet.py,
-  materials.py, sweeps.py, plotting.py, _binding.cpp
+  materials.py, sweeps.py, plotting.py, optimizer.py, _binding.cpp
 
 python/supermag/themes/
   __init__.py, publication.py, presentation.py, draft.py, dark.py
@@ -632,11 +632,11 @@ python/tests/
 ### OCaml Orchestrator
 ```
 ocaml/lib/ffi/       stubs.ml, stubs.mli, solvers.ml
-ocaml/lib/pipeline/  sweep.ml, chain.ml, device.ml, design.ml
+ocaml/lib/pipeline/  sweep.ml, chain.ml, device.ml, design.ml, optimize.ml
 ocaml/lib/types/     params.ml, material.ml, result.ml, geometry.ml
 ocaml/bin/           sweep_driver.ml
 ocaml/test/          test_ffi.ml, test_chain.ml, test_sweep.ml,
-                     test_device.ml, test_design.ml
+                     test_device.ml, test_design.ml, test_optimize.ml
 ```
 
 ### Build & CI

@@ -118,7 +118,8 @@ let build_params_from_stack stack_str sc fm model phase gamma gamma_b
 let run_sweep param_str range_str sc fm model phase
     gamma gamma_b format_str output_file d_f_range_str d_s_opt geom_str
     depairing_str stack_str domain_width domain_wall
-    explore tc_min tc_max max_d_total =
+    explore tc_min tc_max max_d_total
+    do_optimize target_tc_opt vary_strs robust_tol_str =
   match parse_range range_str with
   | Error (`Msg msg) -> Printf.eprintf "Error: %s\n" msg; 1
   | Ok (lo, hi, n) ->
@@ -150,6 +151,79 @@ let run_sweep param_str range_str sc fm model phase
         Design.to_csv oc filtered;
       if output_file <> "" then close_out oc;
       0
+    end else if do_optimize then begin
+      (* ── Optimization mode ───────────────────────── *)
+      match build_params_from_stack stack_str sc fm model phase
+            gamma gamma_b d_s_opt geom_str domain_width domain_wall with
+      | Error msg -> Printf.eprintf "Error: %s\n" msg; 1
+      | Ok params ->
+        let parse_vary s =
+          match String.split_on_char ':' s with
+          | [name; range_s] ->
+            (match String.split_on_char ',' range_s with
+             | [a; b] ->
+               (try Ok (name, Float.of_string a, Float.of_string b)
+                with _ -> Error (Printf.sprintf "bad --vary range: %s" s))
+             | _ -> Error (Printf.sprintf "--vary must be name:lo,hi — got: %s" s))
+          | _ -> Error (Printf.sprintf "--vary must be name:lo,hi — got: %s" s)
+        in
+        let free = ref Optimize.no_free in
+        let err = ref None in
+        List.iter (fun vs ->
+          match parse_vary vs with
+          | Error msg -> err := Some msg
+          | Ok (name, lo, hi) ->
+            let range = Some (lo, hi) in
+            (match name with
+             | "d_S" -> free := { !free with vary_d_s = range }
+             | "d_F" -> free := { !free with vary_d_f = range }
+             | "gamma" -> free := { !free with vary_gamma = range }
+             | "gamma_B" | "gamma_b" -> free := { !free with vary_gamma_b = range }
+             | "E_ex" | "e_ex" -> free := { !free with vary_e_ex = range }
+             | _ -> err := Some (Printf.sprintf "unknown --vary parameter: %s" name))
+        ) vary_strs;
+        (match !err with
+         | Some msg -> Printf.eprintf "Error: %s\n" msg; 1
+         | None ->
+           let objective = match target_tc_opt with
+             | Some tc -> Optimize.Target_tc tc
+             | None -> Optimize.Minimize_tc
+           in
+           let problem = Optimize.{
+             base_params = params;
+             free = !free;
+             objective;
+             constraints = Optimize.no_constraints;
+             depairing;
+             tolerance = 1e-4;
+             max_evaluations = 500;
+           } in
+           let result = match robust_tol_str with
+             | "" -> Optimize.optimize problem
+             | s ->
+               let tols = Array.of_list (List.map Float.of_string
+                   (String.split_on_char ',' s)) in
+               Optimize.robust_optimize problem ~tolerances:tols
+           in
+           (match result with
+            | Error msg -> Printf.eprintf "Optimization error: %s\n" msg; 1
+            | Ok r ->
+              Printf.fprintf oc "# SUPERMag optimization result\n";
+              Printf.fprintf oc "Tc_achieved_K: %.6f\n" r.tc_achieved;
+              Printf.fprintf oc "d_F_optimal_nm: %.6f\n" r.d_f_optimal;
+              Printf.fprintf oc "d_S_nm: %.6f\n" r.optimal_params.d_s;
+              Printf.fprintf oc "gamma: %.6f\n" r.optimal_params.gamma;
+              Printf.fprintf oc "gamma_B: %.6f\n" r.optimal_params.gamma_b;
+              Printf.fprintf oc "E_ex_meV: %.6f\n" r.optimal_params.e_ex;
+              Printf.fprintf oc "evaluations: %d\n" r.evaluations;
+              (match r.sensitivity with
+               | None -> ()
+               | Some s ->
+                 Printf.fprintf oc "dTc_ddf_K_per_nm: %.6f\n" s.d_tc_d_df;
+                 Printf.fprintf oc "dTc_dds_K_per_nm: %.6f\n" s.d_tc_d_ds;
+                 Printf.fprintf oc "dTc_dgamma: %.6f\n" s.d_tc_d_gamma);
+              if output_file <> "" then close_out oc;
+              0))
     end else begin
       (* ── Single-stack sweep mode ─────────────────── *)
       match Sweep.sweep_param_of_string param_str with
@@ -280,6 +354,23 @@ let max_d_total_t =
   let doc = "Maximum total thickness d_S+d_F (nm) constraint for --explore." in
   Arg.(value & opt (some float) None & info ["max-d-total"] ~doc ~docv:"D_TOTAL")
 
+let optimize_t =
+  let doc = "Optimization mode: find parameters that achieve the objective." in
+  Arg.(value & flag & info ["optimize"] ~doc)
+
+let target_tc_t =
+  let doc = "Target Tc (K) for optimization. If omitted, minimizes Tc." in
+  Arg.(value & opt (some float) None & info ["target-tc"] ~doc ~docv:"TC_TARGET")
+
+let vary_t =
+  let doc = "Free parameter and range: name:lo,hi (e.g. d_F:0.5,20). Repeatable." in
+  Arg.(value & opt_all string [] & info ["vary"] ~doc ~docv:"PARAM:LO,HI")
+
+let robust_tol_t =
+  let doc = "Fabrication tolerances for robust optimization, comma-separated. \
+             Must match number of --vary params." in
+  Arg.(value & opt string "" & info ["robust-tol"] ~doc ~docv:"TOLERANCES")
+
 let sweep_cmd =
   let doc = "SUPERMag parameter sweep driver" in
   let info = Cmd.info "supermag-sweep" ~doc in
@@ -287,6 +378,7 @@ let sweep_cmd =
     Term.(const run_sweep $ param_t $ range_t $ sc_t $ fm_t $ model_t $ phase_t
           $ gamma_t $ gamma_b_t $ format_t $ output_t $ d_f_range_t $ d_s_t
           $ geometry_t $ depairing_t $ stack_t $ domain_width_t $ domain_wall_t
-          $ explore_t $ tc_min_t $ tc_max_t $ max_d_total_t)
+          $ explore_t $ tc_min_t $ tc_max_t $ max_d_total_t
+          $ optimize_t $ target_tc_t $ vary_t $ robust_tol_t)
 
 let () = exit (Cmd.eval sweep_cmd)

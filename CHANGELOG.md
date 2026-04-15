@@ -18,7 +18,12 @@ Format follows [Keep a Changelog](https://keepachangelog.com/).
 - **CLI `--domain-width`, `--domain-wall`** — Domain geometry configuration flags forwarded to `Device.resolve`.
 - **`test_device.ml`** — 14 Alcotest cases for `parse_stack` and `resolve` (bilayer, trilayer, graded, domains, error paths).
 - **`test_design.ml`** — 5 Alcotest cases for `enumerate_bilayers` and `filter` (full count, subset, tc_min, empty, no constraints).
+- **`optimize.ml`** — Multi-parameter design optimizer. Nelder-Mead in N-dimensional free-parameter subspace (d_S, d_F, γ, γ_B, E_ex) with fabrication constraint projection. Objectives: `Target_tc`, `Minimize_tc`, `Maximize_ic` (via Josephson CPR), `Multi` (weighted combination). `sensitivity_at` computes ∂Tc/∂p via central finite differences. `robust_optimize` adds sensitivity penalty for design-for-manufacturing.
+- **CLI `--optimize`** — Optimization mode on `sweep_driver.ml`. `--target-tc`, `--vary name:lo,hi` (repeatable), `--robust-tol` flags.
+- **`test_optimize.ml`** — 7 Alcotest cases: Nelder-Mead on quadratic, constraint projection (clips + passthrough), sensitivity finiteness, Target_tc 1D (vs golden-section), no-free-params fallback, free-param count.
 - **Tutorial 07** (`07_explorer.ipynb`) — Combinatorial SC×FM explorer: enumerates all 18 bilayer combinations with per-pair γ/γ_B from the interface catalogue, uses Fominov model for finite-thickness S layers, visualizes min-Tc heatmap and normalized suppression matrix, ranks pairs by target temperature with γ/source metadata, demonstrates constraint filtering.
+- **`optimizer.py`** — Multi-parameter design optimization for S/F heterostructures. `optimize_design()` finds (d_S, d_F, γ) via Nelder-Mead to hit a target Tc. `sensitivity_at()` computes ∂Tc/∂p via central finite differences. `robust_optimize()` adds sensitivity penalty for fabrication-tolerant designs.
+- **Tutorial 08** (`08_design_optimizer.ipynb`) — Design optimizer workflow: Nb/Cu₀.₄₃Ni₀.₅₇ π-junction with Tc = 5 K target. Covers Tc landscape visualization, single-objective and multi-parameter optimization, sensitivity analysis, robust optimization, and design comparison.
 
 ### Changed
 
@@ -26,7 +31,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/).
 - **OCaml `stubs.ml`** — Added `solver_options_struct` ctypes binding with 6 fields matching `supermag_solver_options_t`.
 - **OCaml `stubs.mli`** — Added `?tc0:float` to triplet signature; exposed `solver_options` type.
 - **OCaml `solvers.ml`** — Added optional `?opts` parameter to usadel, eilenberger, josephson, and GL wrappers.
-- **OCaml `sweep_driver.ml`** — Refactored to 21 parameters with dual-mode (explore vs sweep). `--param` changed from required to optional (default `d_F`). Added `build_params_from_stack` helper.
+- **OCaml `sweep_driver.ml`** — Refactored to 25 parameters with tri-mode (explore/optimize/sweep). `--param` changed from required to optional (default `d_F`). Added `build_params_from_stack` helper. Added `--optimize`, `--target-tc`, `--vary`, `--robust-tol` flags.
 - **`architecture.md`** — Updated §1 layer diagram and §5 file locations with `device.ml`, `design.ml`, `test_device.ml`, `test_design.ml`.
 
 ## [0.2.1] — 2026-04-14

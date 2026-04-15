@@ -1,3 +1,3 @@
 (tests
- (names test_chain test_ffi test_sweep test_device test_design)
+ (names test_chain test_ffi test_sweep test_device test_design test_optimize)
  (libraries supermag_pipeline supermag_ffi supermag_types alcotest))
