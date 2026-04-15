@@ -20,7 +20,7 @@ Modules:
 __version__ = "0.2.0"
 
 from supermag.proximity import pair_amplitude, critical_temperature
-from supermag.materials import get_material, list_materials
+from supermag.materials import get_material, list_materials, get_interface
 from supermag.sweeps import tc_parameter_sweep, tc_phase_diagram
 from supermag.themes import apply_theme, get_theme, list_themes, theme_context
 from supermag.depairing import (

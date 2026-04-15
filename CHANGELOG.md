@@ -9,11 +9,16 @@ Format follows [Keep a Changelog](https://keepachangelog.com/).
 
 - **`device.ml`** — Layer-stack parser and resolver. `parse_stack "Nb:50/Fe:10"` extracts typed geometry; `resolve` maps bilayer/trilayer/graded/domains stacks to `proximity_params`, auto-detecting bilayer (S/F) and trilayer (S/N/F). Graded and domain geometries require explicit `geometry_hint` + `geom_config`.
 - **`design.ml`** — Combinatorial bilayer design explorer. `enumerate_bilayers` runs SC×FM Cartesian product (3×6 = 18 combos) with parallel `Domain.spawn`, returning `design_result` records with material names and `tc_result`. `filter` applies `tc_min`/`tc_max`/`max_d_total` constraints. `to_csv`/`to_json` output formatters.
+- **Interface catalogue** (`INTERFACES`) — 18 (SC, FM) → (γ, γ_B, source) entries for all built-in superconductor/ferromagnet pairs. 3 validated against published data (Buzdin 1982, Radovic 1991, Fominov 2002); 15 estimated from validated pairs.
+- **Fabrication tiers** (`FABRICATION_TIERS`) — Additive γ_B corrections for interface quality: `"clean"` (+0.00), `"sputtered"` (+0.05), `"oxidized"` (+0.30).
+- **`get_interface()`** — Retrieves per-pair (γ, γ_B) with fabrication-tier adjustment. Replaces fixed γ=0.3 across all combinations.
+- **`rho` field** — Bulk resistivity (μΩ·cm) added to all 9 built-in materials (3 SC + 6 FM).
 - **CLI `--stack` flag** — Device stack notation (`--stack "Nb:50/Fe:10"`) on `sweep_driver.ml`. Parses via `Device.parse_stack`, resolves via `Device.resolve`. Takes priority over `--sc`/`--fm`.
 - **CLI `--explore` flag** — Combinatorial exploration mode on `sweep_driver.ml`. Enumerates all SC×FM bilayers over `--range` as d_F array, applies constraint filters (`--tc-min`, `--tc-max`, `--max-d-total`), outputs CSV or JSON.
 - **CLI `--domain-width`, `--domain-wall`** — Domain geometry configuration flags forwarded to `Device.resolve`.
 - **`test_device.ml`** — 14 Alcotest cases for `parse_stack` and `resolve` (bilayer, trilayer, graded, domains, error paths).
 - **`test_design.ml`** — 5 Alcotest cases for `enumerate_bilayers` and `filter` (full count, subset, tc_min, empty, no constraints).
+- **Tutorial 07** (`07_explorer.ipynb`) — Combinatorial SC×FM explorer: enumerates all 18 bilayer combinations with per-pair γ/γ_B from the interface catalogue, uses Fominov model for finite-thickness S layers, visualizes min-Tc heatmap and normalized suppression matrix, ranks pairs by target temperature with γ/source metadata, demonstrates constraint filtering.
 
 ### Changed
 
